@@ -1,26 +1,111 @@
 @import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #111827;
+  --panel: #ffffff;
+  --panel-muted: #f3f6f8;
+  --border: #d9e2e8;
+  --muted: #667085;
+  --accent: #0f766e;
+  --accent-strong: #0b5f59;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --success: #16a34a;
+  --shadow-soft: 0 18px 55px rgb(15 23 42 / 0.14);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-panel-muted: var(--panel-muted);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  overscroll-behavior: none;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+button,
+a,
+input,
+select {
+  font: inherit;
+}
+
+.safe-bottom {
+  padding-bottom: max(0.75rem, var(--safe-area-bottom));
+}
+
+.venue-map-marker {
+  position: relative;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: var(--marker-color, var(--accent));
+  box-shadow: 0 10px 24px rgb(15 23 42 / 0.28);
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.venue-map-marker::after {
+  position: absolute;
+  inset: 0.42rem;
+  border-radius: inherit;
+  background: rgb(255 255 255 / 0.9);
+  content: "";
+}
+
+.venue-map-marker:hover,
+.venue-map-marker:focus-visible,
+.venue-map-marker.is-selected {
+  border-color: #111827;
+  box-shadow: 0 14px 32px rgb(15 23 42 / 0.34);
+  transform: translateY(-2px) scale(1.08);
+}
+
+.venue-map-marker.is-selected {
+  z-index: 5;
+}
+
+.maplibregl-ctrl-attrib {
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+.maplibregl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right {
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 767px) {
+  .maplibregl-ctrl-bottom-left {
+    display: none;
+  }
+
+  .maplibregl-ctrl-bottom-right {
+    display: none;
+  }
 }
