@@ -1,4 +1,4 @@
-import type { JsonLdData } from '@/lib/seo'
+import { serializeJsonLd, type JsonLdData } from '@/lib/seo'
 
 type JsonLdProps = {
   data: JsonLdData
@@ -10,7 +10,7 @@ export function JsonLd({ data }: JsonLdProps) {
       data-testid="json-ld"
       type="application/ld+json"
       suppressHydrationWarning
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
     />
   )
 }

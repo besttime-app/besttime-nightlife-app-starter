@@ -53,7 +53,7 @@ export function VenueCard({ venue, selected = false, onSelect }: VenueCardProps)
         <span className={`text-xs font-semibold ${venue.liveStatus === 'available' ? 'text-emerald-700' : 'text-slate-500'}`}>
           {venue.liveStatus === 'available' ? 'Live now' : 'Forecast'}
         </span>
-        <Link href={`/venues/${venue.slug}`} className="text-xs font-semibold text-slate-900 underline-offset-2 hover:underline">
+        <Link href={`/venues/${encodeURIComponent(venue.id)}`} className="text-xs font-semibold text-slate-900 underline-offset-2 hover:underline">
           Details
         </Link>
       </div>

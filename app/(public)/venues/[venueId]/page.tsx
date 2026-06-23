@@ -5,9 +5,11 @@ import { Activity, ArrowLeft, Clock3, Database, MapPin, Star } from 'lucide-reac
 import { Attribution } from '@/components/app/Attribution'
 import { VenueMap } from '@/components/map/VenueMap'
 import { JsonLd } from '@/components/seo/JsonLd'
+import { getBusynessMetric, getVenueDayForDate } from '@/components/venue/VenueDetailPanel'
 import { VenueHeatmap } from '@/components/venue/VenueHeatmap'
 import { allFixtureVenues } from '@/data/fixtures/nyc-nightlife'
 import { getFixtureVenueById } from '@/lib/data/fixture-store'
+import { getVenueRepository } from '@/lib/data/repository'
 import { venueJsonLd } from '@/lib/seo'
 import type { Venue } from '@/lib/types'
 
@@ -33,6 +35,16 @@ const priceLabel = (priceLevel?: number) => {
 
 const venuePath = (venue: Venue) => `/venues/${venue.slug}`
 
+const getVenueByRouteId = async (venueId: string) => {
+  const fixtureVenue = getFixtureVenueById(venueId)
+  if (fixtureVenue) return fixtureVenue
+
+  const repository = getVenueRepository()
+  if (repository.mode !== 'live') return undefined
+
+  return repository.getVenue(venueId)
+}
+
 export function generateStaticParams() {
   const params = new Map<string, { venueId: string }>()
 
@@ -46,7 +58,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: VenuePageProps): Promise<Metadata> {
   const { venueId } = await params
-  const venue = getFixtureVenueById(venueId)
+  const venue = await getVenueByRouteId(venueId)
 
   if (!venue) {
     return {
@@ -75,12 +87,12 @@ export async function generateMetadata({ params }: VenuePageProps): Promise<Meta
 
 export default async function VenuePage({ params }: VenuePageProps) {
   const { venueId } = await params
-  const venue = getFixtureVenueById(venueId)
+  const venue = await getVenueByRouteId(venueId)
 
   if (!venue) notFound()
 
-  const busyness = venue.liveBusyness ?? venue.busyness
-  const today = venue.week[0]
+  const busynessMetric = getBusynessMetric(venue)
+  const today = getVenueDayForDate(venue)
   const peakToday = today ? hourLabel(today.peakHour) : '-'
   const quietToday = today ? hourLabel(today.quietHour) : '-'
   const bestTimeUrl = venue.bestTimeUrl ?? 'https://besttime.app'
@@ -119,7 +131,7 @@ export default async function VenuePage({ params }: VenuePageProps) {
             </div>
 
             <section aria-label="Venue metrics" className="grid grid-cols-2 gap-3">
-              <Metric icon={<Activity aria-hidden="true" className="h-4 w-4 text-teal-700" />} label="Busy now" value={`${busyness}%`} />
+              <Metric icon={<Activity aria-hidden="true" className="h-4 w-4 text-teal-700" />} label={busynessMetric.label} value={busynessMetric.value} />
               <Metric icon={<Star aria-hidden="true" className="h-4 w-4 text-amber-500" />} label={formatReviews(venue.reviews)} value={venue.rating?.toFixed(1) ?? '-'} />
               <Metric icon={<Clock3 aria-hidden="true" className="h-4 w-4 text-slate-600" />} label="Peak today" value={peakToday} />
               <Metric icon={<Clock3 aria-hidden="true" className="h-4 w-4 text-slate-600" />} label="Quiet today" value={quietToday} />

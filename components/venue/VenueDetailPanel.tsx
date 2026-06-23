@@ -12,6 +12,20 @@ const hourLabel = (hour: number) => {
   return hour > 12 ? `${hour - 12} PM` : `${hour} AM`
 }
 
+export const getVenueWeekdayIndex = (date = new Date()) => (date.getDay() + 6) % 7
+
+export const getVenueDayForDate = (venue: Venue, date = new Date()) =>
+  venue.week[getVenueWeekdayIndex(date)]
+
+export const getBusynessMetric = (venue: Venue) => {
+  const hasLiveBusyness = venue.liveStatus === 'available' && venue.liveBusyness !== undefined
+
+  return {
+    label: hasLiveBusyness ? 'Busy now' : 'Typical busyness',
+    value: `${hasLiveBusyness ? venue.liveBusyness : venue.busyness}%`
+  }
+}
+
 export function VenueDetailPanel({ venue }: VenueDetailPanelProps) {
   if (!venue) {
     return (
@@ -24,8 +38,8 @@ export function VenueDetailPanel({ venue }: VenueDetailPanelProps) {
     )
   }
 
-  const busyness = venue.liveBusyness ?? venue.busyness
-  const today = venue.week[0]
+  const busynessMetric = getBusynessMetric(venue)
+  const today = getVenueDayForDate(venue)
 
   return (
     <section className="rounded-md border border-slate-200 bg-white p-4">
@@ -45,8 +59,8 @@ export function VenueDetailPanel({ venue }: VenueDetailPanelProps) {
       <div className="mt-4 grid grid-cols-3 gap-2">
         <div className="rounded-md bg-slate-50 p-3">
           <Activity aria-hidden="true" className="h-4 w-4 text-teal-700" />
-          <p className="mt-2 text-xl font-semibold text-slate-950">{busyness}%</p>
-          <p className="text-xs font-medium text-slate-500">Busy now</p>
+          <p className="mt-2 text-xl font-semibold text-slate-950">{busynessMetric.value}</p>
+          <p className="text-xs font-medium text-slate-500">{busynessMetric.label}</p>
         </div>
         <div className="rounded-md bg-slate-50 p-3">
           <Star aria-hidden="true" className="h-4 w-4 text-amber-500" />
@@ -67,7 +81,7 @@ export function VenueDetailPanel({ venue }: VenueDetailPanelProps) {
           {venue.liveStatus === 'available' ? 'Live signal available' : 'Forecast data'}
         </span>
         <Link
-          href={`/venues/${venue.slug}`}
+          href={`/venues/${encodeURIComponent(venue.id)}`}
           className="inline-flex min-h-9 items-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
           Details

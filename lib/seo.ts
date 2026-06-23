@@ -18,6 +18,36 @@ export const canonicalUrl = (path: string) => {
   return `${base}${normalizedPath}`
 }
 
+export const serializeJsonLd = (data: JsonLdData) =>
+  JSON.stringify(data).replace(/[<>&\u2028\u2029]/g, character => {
+    switch (character) {
+      case '<':
+        return '\\u003c'
+      case '>':
+        return '\\u003e'
+      case '&':
+        return '\\u0026'
+      case '\u2028':
+        return '\\u2028'
+      case '\u2029':
+        return '\\u2029'
+      default:
+        return character
+    }
+  })
+
+const isPublicWebsiteUrl = (url: string) => {
+  try {
+    const parsed = new URL(url)
+    const isWebProtocol = parsed.protocol === 'https:' || parsed.protocol === 'http:'
+    const isApiEndpoint = parsed.pathname.toLowerCase().startsWith('/api/')
+
+    return isWebProtocol && !isApiEndpoint
+  } catch {
+    return false
+  }
+}
+
 export const venueJsonLd = (venue: Venue): JsonLdData => {
   const schema: JsonLdData = {
     '@context': 'https://schema.org',
@@ -33,7 +63,7 @@ export const venueJsonLd = (venue: Venue): JsonLdData => {
     }
   }
 
-  if (venue.bestTimeUrl) {
+  if (venue.bestTimeUrl && isPublicWebsiteUrl(venue.bestTimeUrl)) {
     schema.sameAs = venue.bestTimeUrl
   }
 
