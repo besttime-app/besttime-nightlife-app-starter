@@ -5,6 +5,14 @@ import { MapPin, Navigation, X } from 'lucide-react'
 
 const storageKey = 'besttime.location-choice'
 const coordinatesStorageKey = 'besttime.location-coordinates'
+const focusableSelector = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])'
+].join(',')
 
 type LocationChoice = 'browser' | 'nyc-demo'
 type BrowserLocation = {
@@ -29,10 +37,15 @@ const readStoredLocation = (): BrowserLocation | undefined => {
   }
 }
 
+const getFocusableElements = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll<HTMLElement>(focusableSelector)).filter(element => element.offsetParent !== null)
+
 export function LocationModal({ onUseBrowserLocation, onUseDemo }: LocationModalProps) {
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<string>('Use your current area or start with the NYC demo venues.')
+  const dialogRef = useRef<HTMLElement | null>(null)
   const primaryActionRef = useRef<HTMLButtonElement | null>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -71,14 +84,55 @@ export function LocationModal({ onUseBrowserLocation, onUseDemo }: LocationModal
   useEffect(() => {
     if (!open) return
 
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     primaryActionRef.current?.focus()
+
+    return () => {
+      const previousFocus = previousFocusRef.current
+      if (previousFocus?.isConnected) previousFocus.focus()
+      previousFocusRef.current = null
+    }
   }, [open])
 
   useEffect(() => {
     if (!open) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') saveChoice('nyc-demo')
+      if (event.key === 'Escape') {
+        saveChoice('nyc-demo')
+        return
+      }
+
+      if (event.key !== 'Tab') return
+
+      const dialog = dialogRef.current
+      if (!dialog) return
+
+      const focusableElements = getFocusableElements(dialog)
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements.at(-1)
+
+      if (!firstElement || !lastElement) {
+        event.preventDefault()
+        dialog.focus()
+        return
+      }
+
+      const activeElement = document.activeElement
+      const focusIsInsideDialog = activeElement instanceof Node && dialog.contains(activeElement)
+
+      if (event.shiftKey) {
+        if (!focusIsInsideDialog || activeElement === firstElement) {
+          event.preventDefault()
+          lastElement.focus()
+        }
+        return
+      }
+
+      if (!focusIsInsideDialog || activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -114,9 +168,11 @@ export function LocationModal({ onUseBrowserLocation, onUseDemo }: LocationModal
   return (
     <div className="fixed inset-0 z-50 grid place-items-end bg-slate-950/32 p-3 sm:place-items-center">
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="location-title"
+        tabIndex={-1}
         className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)]"
       >
         <div className="flex items-start justify-between gap-4">

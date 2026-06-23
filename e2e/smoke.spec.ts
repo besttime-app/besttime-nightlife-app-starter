@@ -8,9 +8,35 @@ const resetLocationChoice = async (page: Page) => {
 
 const closeLocationModalWithDemoFallback = async (page: Page) => {
   const dialog = page.getByRole('dialog', { name: 'Choose a starting location' })
+  const useLocationButton = page.getByRole('button', { name: 'Use my location' })
+  const demoButton = page.getByRole('button', { name: 'Explore NYC demo' })
+  const closeButton = page.getByRole('button', { name: 'Close location prompt' })
+  const focusState = () => page.evaluate(() => {
+    const activeElement = document.activeElement
+    const openDialog = document.querySelector('[role="dialog"][aria-modal="true"]')
+    const backgroundNavigation = activeElement?.closest('nav[aria-label="Primary"], nav[aria-label="Mobile"]')
+
+    return {
+      isInsideDialog: Boolean(openDialog && activeElement && openDialog.contains(activeElement)),
+      isInBackgroundNavigation: Boolean(backgroundNavigation)
+    }
+  })
 
   await expect(dialog).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Use my location' })).toBeFocused()
+  await expect(useLocationButton).toBeFocused()
+
+  await page.keyboard.press('Tab')
+  await expect(demoButton).toBeFocused()
+  await expect.poll(focusState).toEqual({ isInsideDialog: true, isInBackgroundNavigation: false })
+
+  await page.keyboard.press('Tab')
+  await expect(closeButton).toBeFocused()
+  await expect.poll(focusState).toEqual({ isInsideDialog: true, isInBackgroundNavigation: false })
+
+  await page.keyboard.press('Shift+Tab')
+  await expect(demoButton).toBeFocused()
+  await expect.poll(focusState).toEqual({ isInsideDialog: true, isInBackgroundNavigation: false })
+
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem('besttime.location-choice'))).toBe('nyc-demo')
