@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { BarChart3, Building2, Database, Loader2, Map, MapPin } from 'lucide-react'
 import { Attribution } from '@/components/app/Attribution'
@@ -27,6 +27,43 @@ const defaultAdvancedFilters: AdvancedFilterState = {
   liveOnly: false
 }
 
+const demoLocation = { kind: 'demo' } as const
+
+type BrowserLocation = {
+  lat: number
+  lng: number
+}
+
+type LocationState = typeof demoLocation | ({ kind: 'browser' } & BrowserLocation)
+
+const buildVenueSearchParams = ({
+  advanced,
+  category,
+  location,
+  quickFilter,
+  resultLimit
+}: {
+  advanced: AdvancedFilterState
+  category: VenueCategory
+  location: LocationState
+  quickFilter?: VenueFilters['quickFilter']
+  resultLimit: number
+}) => {
+  const params = new URLSearchParams({
+    category,
+    limit: String(resultLimit),
+    radius: String(advanced.radius)
+  })
+
+  if (quickFilter) params.set('quickFilter', quickFilter)
+  if (location.kind === 'browser') {
+    params.set('lat', String(location.lat))
+    params.set('lng', String(location.lng))
+  }
+
+  return params
+}
+
 const navItems = [
   { label: 'Map', icon: Map, href: '/', active: true },
   { label: 'City', icon: Building2, href: '/cities/new-york/nightlife', active: false },
@@ -41,25 +78,47 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
   const [category, setCategory] = useState<VenueCategory>(initialCategory)
   const [quickFilter, setQuickFilter] = useState<VenueFilters['quickFilter']>()
   const [advanced, setAdvanced] = useState<AdvancedFilterState>(defaultAdvancedFilters)
+  const [location, setLocation] = useState<LocationState>(demoLocation)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | undefined>()
+  const initialVenueSearchKeyRef = useRef(
+    buildVenueSearchParams({
+      advanced: defaultAdvancedFilters,
+      category: initialCategory,
+      location: demoLocation,
+      resultLimit
+    }).toString()
+  )
+  const fetchedChangedStateRef = useRef(false)
+
+  const venueSearchKey = useMemo(
+    () => buildVenueSearchParams({ advanced, category, location, quickFilter, resultLimit }).toString(),
+    [advanced, category, location, quickFilter, resultLimit]
+  )
+
+  const handleUseBrowserLocation = useCallback((browserLocation: BrowserLocation) => {
+    setLocation({ kind: 'browser', ...browserLocation })
+  }, [])
+
+  const handleUseDemo = useCallback(() => {
+    setLocation(demoLocation)
+  }, [])
 
   useEffect(() => {
+    const isInitialServerState = venueSearchKey === initialVenueSearchKeyRef.current
+    if (isInitialServerState && !fetchedChangedStateRef.current) {
+      return
+    }
+    if (!isInitialServerState) fetchedChangedStateRef.current = true
+
     const controller = new AbortController()
 
     async function loadVenues() {
       setIsLoading(true)
       setError(undefined)
 
-      const params = new URLSearchParams({
-        category,
-        limit: String(resultLimit),
-        radius: String(advanced.radius)
-      })
-      if (quickFilter) params.set('quickFilter', quickFilter)
-
       try {
-        const response = await fetch(`/api/besttime/venues?${params.toString()}`, {
+        const response = await fetch(`/api/besttime/venues?${venueSearchKey}`, {
           signal: controller.signal
         })
         const body = await response.json() as { mode?: AppMode; venues?: Venue[]; error?: string }
@@ -83,7 +142,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
     return () => {
       controller.abort()
     }
-  }, [advanced.radius, category, quickFilter, resultLimit])
+  }, [venueSearchKey])
 
   const visibleVenues = useMemo(
     () => venues.filter(venue => {
@@ -96,6 +155,8 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
 
   const selectedVenue = visibleVenues.find(venue => venue.id === selectedVenueId) ?? visibleVenues[0]
   const effectiveSelectedVenueId = selectedVenue?.id
+  const locationLabel = location.kind === 'browser' ? 'Near you' : 'NYC'
+  const modeLabel = mode === 'live' ? 'Live data' : location.kind === 'browser' ? 'Near you demo' : 'NYC demo'
 
   const filterPanel = (
     <div className="grid gap-3">
@@ -148,8 +209,10 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
           <div className="border-b border-slate-200 bg-white p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">{mode === 'live' ? 'Live data' : 'NYC demo'}</p>
-                <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">BestTime venues in New York</h1>
+                <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">{modeLabel}</p>
+                <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
+                  BestTime venues {location.kind === 'browser' ? 'near you' : 'in New York'}
+                </h1>
               </div>
               {isLoading ? <Loader2 aria-label="Loading venues" className="h-5 w-5 animate-spin text-slate-500" /> : null}
             </div>
@@ -170,12 +233,12 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
           <div className="pointer-events-auto rounded-lg border border-white/70 bg-white/94 p-3 shadow-[var(--shadow-soft)] backdrop-blur">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">{mode === 'live' ? 'Live data' : 'NYC demo'}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">{modeLabel}</p>
                 <h1 className="truncate text-base font-semibold text-slate-950">BestTime venues</h1>
               </div>
               <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
                 <MapPin aria-hidden="true" className="h-3 w-3" />
-                NYC
+                {locationLabel}
               </span>
             </div>
             <div className="grid gap-3">
@@ -184,7 +247,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
             </div>
           </div>
         </div>
-        <section className="safe-bottom fixed inset-x-0 bottom-[4.9rem] z-20 max-h-[44dvh] overflow-y-auto rounded-t-lg border-t border-slate-200 bg-slate-50 p-3 shadow-[0_-18px_45px_rgb(15_23_42/0.16)]">
+        <section className="safe-bottom fixed inset-x-0 bottom-[4.9rem] z-20 max-h-[44dvh] overflow-y-auto rounded-t-lg border-t border-slate-200 bg-slate-50 p-3 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+1rem))] scroll-pb-6 shadow-[0_-18px_45px_rgb(15_23_42/0.16)]">
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-300" />
           <div className="mb-3">
             <AdvancedFilters value={advanced} onChange={setAdvanced} />
@@ -197,7 +260,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
         </section>
         <BottomNav />
       </div>
-      <LocationModal />
+      <LocationModal onUseBrowserLocation={handleUseBrowserLocation} onUseDemo={handleUseDemo} />
     </main>
   )
 }

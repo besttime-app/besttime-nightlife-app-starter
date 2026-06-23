@@ -25,6 +25,27 @@ describe('fixture store', () => {
     expect(cafes.every(venue => venue.categories.includes('cafes'))).toBe(true)
   })
 
+  it('filters fixture venues by radius when coordinates are available', () => {
+    const nearby = getFixtureVenues({
+      category: 'nightlife',
+      lat: 40.7209,
+      lng: -73.9872,
+      radius: 800
+    })
+
+    expect(nearby.map(venue => venue.id)).toEqual([
+      'demo-nyc-bar-1',
+      'demo-nyc-bar-2',
+      'demo-nyc-bar-3'
+    ])
+  })
+
+  it('keeps the default demo radius inert until coordinates are available', () => {
+    const venues = getFixtureVenues({ category: 'nightlife', radius: 800 })
+
+    expect(venues.map(venue => venue.id)).toContain('demo-nyc-bar-6')
+  })
+
   it('returns detail data by venue id', () => {
     const venue = getFixtureVenueById('demo-nyc-bar-1')
     const week = getFixtureWeek('demo-nyc-bar-1')

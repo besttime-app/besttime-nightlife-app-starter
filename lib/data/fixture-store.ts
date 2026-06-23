@@ -43,10 +43,32 @@ const quickFilterSort = (venues: Venue[], quickFilter: VenueFilters['quickFilter
   return sorted
 }
 
+const distanceInMeters = (from: Pick<VenueFilters, 'lat' | 'lng'>, venue: Venue) => {
+  if (from.lat === undefined || from.lng === undefined) return 0
+
+  const earthRadiusMeters = 6371000
+  const toRadians = (degrees: number) => degrees * Math.PI / 180
+  const fromLat = toRadians(from.lat)
+  const venueLat = toRadians(venue.lat)
+  const deltaLat = toRadians(venue.lat - from.lat)
+  const deltaLng = toRadians(venue.lng - from.lng)
+  const haversine =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(fromLat) * Math.cos(venueLat) * Math.sin(deltaLng / 2) ** 2
+
+  return 2 * earthRadiusMeters * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine))
+}
+
+const radiusMatches = (venue: Venue, filters: Partial<VenueFilters>) => {
+  if (filters.lat === undefined || filters.lng === undefined || filters.radius === undefined) return true
+
+  return distanceInMeters(filters, venue) <= filters.radius
+}
+
 export const getFixtureVenues = (filters: Partial<VenueFilters> = {}): Venue[] => {
   const category = filters.category || 'nightlife'
   const limit = filters.limit || 24
-  const matches = allFixtureVenues.filter(venue => categoryMatches(venue, category))
+  const matches = allFixtureVenues.filter(venue => categoryMatches(venue, category) && radiusMatches(venue, filters))
 
   return quickFilterSort(matches, filters.quickFilter).slice(0, limit).map(cloneVenue)
 }
