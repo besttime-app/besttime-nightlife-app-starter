@@ -38,7 +38,7 @@ const normalizeCategory = (input: Record<string, unknown>): VenueCategory => {
   if (validCategories.includes(raw as VenueCategory)) return raw as VenueCategory
   if (raw.includes('cafe') || raw.includes('coffee') || raw.includes('bakery') || raw.includes('tea')) return 'cafes'
   if (raw.includes('shop') || raw.includes('store') || raw.includes('apparel') || raw.includes('market')) return 'shopping'
-  if (raw.includes('bar') || raw.includes('club') || raw.includes('pub') || raw.includes('night') || raw.includes('wine')) return 'nightlife'
+  if (raw.includes('bar') || raw.includes('beer') || raw.includes('brewery') || raw.includes('club') || raw.includes('pub') || raw.includes('night') || raw.includes('wine')) return 'nightlife'
 
   return 'popular'
 }

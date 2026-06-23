@@ -24,6 +24,13 @@ const appendParams = (url: URL, params: BestTimeParams) => {
   })
 }
 
+const buildBestTimeUrl = (path: string) => {
+  const base = siteConfig.bestTimeApiBaseUrl.replace(/\/+$/, '')
+  const normalizedPath = path.replace(/^\/+/, '')
+
+  return new URL(`${base}/${normalizedPath}`)
+}
+
 const readJson = async (response: Response) => {
   const text = await response.text()
   if (!text) return null
@@ -43,7 +50,7 @@ export const requestBestTime = async (
   const apiKey = process.env.BESTTIME_API_KEY?.trim()
   if (!apiKey) throw new BestTimeError('BESTTIME_API_KEY is not configured')
 
-  const url = new URL(path, siteConfig.bestTimeApiBaseUrl)
+  const url = buildBestTimeUrl(path)
   appendParams(url, {
     ...params,
     api_key_private: apiKey
