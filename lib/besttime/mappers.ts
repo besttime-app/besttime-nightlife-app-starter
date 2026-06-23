@@ -78,7 +78,7 @@ const normalizeDayProfile = (input: Record<string, unknown>): number[] => {
   return profile.slice(0, 24)
 }
 
-const buildDay = (profile: number[], dayInt: number): VenueDay => {
+const buildStarterDayFromSingleBestTimeProfile = (profile: number[], dayInt: number): VenueDay => {
   const hours: VenueHour[] = profile.map((busyness, index) => ({
     hour: (index + 6) % 24,
     busyness: clampBusyness(busyness)
@@ -88,14 +88,15 @@ const buildDay = (profile: number[], dayInt: number): VenueDay => {
 
   return {
     dayInt,
-    dayLabel: dayLabels[dayInt],
+    dayLabel: `Starter ${dayLabels[dayInt]} (single-day normalized)`,
     hours,
     peakHour: peak.hour,
     quietHour: quiet.hour
   }
 }
 
-const buildWeek = (profile: number[]): VenueDay[] => dayLabels.map((_, dayInt) => buildDay(profile, dayInt))
+const buildStarterWeekFromSingleBestTimeDay = (profile: number[]): VenueDay[] =>
+  dayLabels.map((_, dayInt) => buildStarterDayFromSingleBestTimeProfile(profile, dayInt))
 
 const averageBusyness = (profile: number[]) =>
   clampBusyness(profile.reduce((total, value) => total + value, 0) / Math.max(profile.length, 1))
@@ -107,7 +108,7 @@ export const mapBestTimeVenue = (input: Record<string, unknown>): Venue => {
   const primaryCategory = normalizeCategory(input)
   const categories = normalizeCategories(input, primaryCategory)
   const profile = normalizeDayProfile(input)
-  const week = buildWeek(profile)
+  const week = buildStarterWeekFromSingleBestTimeDay(profile)
   const liveBusyness = getNumber(input, ['venue_foot_traffic_live', 'live_busyness', 'liveBusyness'])
   const priceLevel = getNumber(input, ['price_level', 'priceLevel'])
   const busyness = getNumber(input, ['busyness', 'day_mean']) ?? averageBusyness(profile)

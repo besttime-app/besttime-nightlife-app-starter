@@ -58,10 +58,25 @@ export const requestBestTime = async (
     api_key_private: apiKey
   })
 
-  const response = await fetch(url, {
-    ...init,
-    cache: 'no-store'
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      ...init,
+      cache: 'no-store'
+    })
+  } catch (error) {
+    const details = redactPrivateKey(error, apiKey)
+    const message =
+      typeof details === 'object' && details && 'message' in details && typeof details.message === 'string'
+        ? `BestTime network request failed: ${details.message}`
+        : 'BestTime network request failed'
+
+    throw new BestTimeError(message, {
+      status: 502,
+      details
+    })
+  }
+
   const json = redactPrivateKey(await readJson(response), apiKey)
   const status = typeof json === 'object' && json && 'status' in json ? String(json.status).toLowerCase() : undefined
   const message =

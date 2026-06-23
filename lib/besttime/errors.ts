@@ -29,6 +29,13 @@ export const redactPrivateKey = (value: unknown, activeSecret?: string): unknown
 
   if (Array.isArray(value)) return value.map(item => redactPrivateKey(item, activeSecret))
 
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: redactString(value.message, activeSecret)
+    }
+  }
+
   if (value && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value)

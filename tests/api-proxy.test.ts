@@ -58,6 +58,32 @@ describe('BestTime mapping and repository', () => {
     expect(venue.week[0].peakHour).toBe(21)
   })
 
+  it('documents the starter week fallback from a single BestTime day profile', () => {
+    const profile = Array.from({ length: 24 }, (_, index) => index)
+
+    const venue = mapBestTimeVenue({
+      venue_id: 'ven_single_day',
+      venue_name: 'Single Day Bar',
+      venue_type: 'BAR',
+      day_raw_whole: profile
+    })
+
+    expect(venue.week).toHaveLength(7)
+    expect(venue.week.every(day => day.hours.length === 24)).toBe(true)
+    expect(venue.week.map(day => day.dayLabel)).toEqual([
+      'Starter Monday (single-day normalized)',
+      'Starter Tuesday (single-day normalized)',
+      'Starter Wednesday (single-day normalized)',
+      'Starter Thursday (single-day normalized)',
+      'Starter Friday (single-day normalized)',
+      'Starter Saturday (single-day normalized)',
+      'Starter Sunday (single-day normalized)'
+    ])
+    expect(venue.week[0].hours[0]).toEqual({ hour: 6, busyness: 0 })
+    expect(venue.week[0].hours[15]).toEqual({ hour: 21, busyness: 15 })
+    expect(venue.week[6].hours[23]).toEqual({ hour: 5, busyness: 23 })
+  })
+
   it('maps BestTime venue_info detail responses', async () => {
     vi.stubEnv('BESTTIME_API_KEY', 'pri_detail_secret')
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
@@ -147,6 +173,25 @@ describe('BestTime mapping and repository', () => {
       expect(error).toBeInstanceOf(BestTimeError)
       expect(JSON.stringify((error as BestTimeError).details)).not.toContain('plain-active-secret')
       expect(JSON.stringify((error as BestTimeError).details)).not.toContain('pri_nested_secret')
+    }
+  })
+
+  it('redacts BestTime network failure messages and details', async () => {
+    vi.stubEnv('BESTTIME_API_KEY', 'network-secret')
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('Failed to fetch https://besttime.app/api/v1/venues/filter?api_key_private=network-secret&limit=1')
+    }))
+
+    try {
+      await listBestTimeVenues({ category: 'nightlife', limit: 1 })
+      throw new Error('Expected BestTimeError')
+    } catch (error) {
+      expect(error).toBeInstanceOf(BestTimeError)
+      expect((error as BestTimeError).status).toBe(502)
+      expect((error as BestTimeError).message).not.toContain('network-secret')
+      expect((error as BestTimeError).message).not.toContain('api_key_private=network-secret')
+      expect(JSON.stringify((error as BestTimeError).details)).not.toContain('network-secret')
+      expect(JSON.stringify((error as BestTimeError).details)).not.toContain('api_key_private=network-secret')
     }
   })
 
