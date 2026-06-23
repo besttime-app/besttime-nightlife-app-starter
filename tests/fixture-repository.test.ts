@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getFixtureVenueById, getFixtureVenues, getFixtureWeek } from '@/lib/data/fixture-store'
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+  vi.resetModules()
+})
 
 describe('fixture store', () => {
   it('returns NYC nightlife venues with forecast data', () => {
@@ -27,5 +32,81 @@ describe('fixture store', () => {
     expect(venue?.name).toBeTruthy()
     expect(week).toHaveLength(7)
     expect(week?.[0].hours).toHaveLength(24)
+  })
+
+  it('returns detail data by BestTime venue id', () => {
+    const venue = getFixtureVenueById('bt-demo-nyc-bar-1')
+
+    expect(venue).toMatchObject({
+      id: 'demo-nyc-bar-1',
+      besttimeVenueId: 'bt-demo-nyc-bar-1',
+      name: 'Lower East Side Cocktail Room'
+    })
+  })
+
+  it('sorts busy-now by current busyness', () => {
+    const venues = getFixtureVenues({ category: 'nightlife', quickFilter: 'busy-now', limit: 3 })
+
+    expect(venues.map(venue => venue.id)).toEqual(['demo-nyc-bar-6', 'demo-nyc-bar-1', 'demo-nyc-bar-2'])
+  })
+
+  it('sorts friday-night with deterministic tie-breakers', () => {
+    const venues = getFixtureVenues({ category: 'nightlife', quickFilter: 'friday-night', limit: 3 })
+
+    expect(venues.map(venue => venue.id)).toEqual(['demo-nyc-bar-6', 'demo-nyc-bar-1', 'demo-nyc-bar-2'])
+  })
+
+  it('sorts quiet-spots by lower busyness', () => {
+    const venues = getFixtureVenues({ category: 'nightlife', quickFilter: 'quiet-spots', limit: 3 })
+
+    expect(venues.map(venue => venue.id)).toEqual(['demo-nyc-bar-5', 'demo-nyc-bar-3', 'demo-nyc-bar-4'])
+  })
+
+  it('sorts high-review by review count', () => {
+    const venues = getFixtureVenues({ category: 'popular', quickFilter: 'high-review', limit: 3 })
+
+    expect(venues.map(venue => venue.id)).toEqual(['demo-nyc-bar-6', 'demo-nyc-shop-3', 'demo-nyc-cafe-1'])
+  })
+
+  it('returns cloned venues and forecast arrays', () => {
+    const [venue] = getFixtureVenues({ category: 'nightlife', limit: 1 })
+    const originalBusyness = venue.week[0].hours[0].busyness
+
+    venue.categories.push('cafes')
+    venue.week[0].hours[0].busyness = 1
+
+    const freshVenue = getFixtureVenueById(venue.id)
+    const freshWeek = getFixtureWeek(venue.id)
+
+    expect(freshVenue?.categories).not.toContain('cafes')
+    expect(freshVenue?.week[0].hours[0].busyness).toBe(originalBusyness)
+    expect(freshWeek?.[0].hours[0].busyness).toBe(originalBusyness)
+    expect(freshWeek).not.toBe(freshVenue?.week)
+  })
+})
+
+describe('site config', () => {
+  it('falls back when the default category is invalid', async () => {
+    vi.stubEnv('NEXT_PUBLIC_DEFAULT_CATEGORY', 'dinner')
+
+    const { siteConfig } = await import('@/lib/config')
+
+    expect(siteConfig.defaultCategory).toBe('nightlife')
+  })
+
+  it('falls back when the default result limit is invalid', async () => {
+    vi.stubEnv('NEXT_PUBLIC_DEFAULT_RESULT_LIMIT', '0')
+
+    const { siteConfig } = await import('@/lib/config')
+
+    expect(siteConfig.defaultResultLimit).toBe(24)
+  })
+
+  it('trims the BestTime API key before checking availability', async () => {
+    vi.stubEnv('BESTTIME_API_KEY', '   ')
+
+    const { hasBestTimeApiKey } = await import('@/lib/config')
+
+    expect(hasBestTimeApiKey()).toBe(false)
   })
 })

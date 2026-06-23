@@ -4,6 +4,7 @@ const dayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satu
 
 type FixtureVenueInput = {
   id: string
+  besttimeVenueId?: string
   slug: string
   name: string
   address: string
@@ -57,6 +58,7 @@ const makeVenue = ({ profile, ...input }: FixtureVenueInput): Venue => ({
 export const nycNightlifeVenues: Venue[] = [
   makeVenue({
     id: 'demo-nyc-bar-1',
+    besttimeVenueId: 'bt-demo-nyc-bar-1',
     slug: 'lower-east-side-cocktail-room',
     name: 'Lower East Side Cocktail Room',
     address: '128 Ludlow St, New York, NY',
@@ -74,6 +76,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-bar-2',
+    besttimeVenueId: 'bt-demo-nyc-bar-2',
     slug: 'bowery-rooftop-lounge',
     name: 'Bowery Rooftop Lounge',
     address: '93 Bowery, New York, NY',
@@ -91,6 +94,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-bar-3',
+    besttimeVenueId: 'bt-demo-nyc-bar-3',
     slug: 'east-village-vinyl-bar',
     name: 'East Village Vinyl Bar',
     address: '219 E 5th St, New York, NY',
@@ -108,6 +112,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-bar-4',
+    besttimeVenueId: 'bt-demo-nyc-bar-4',
     slug: 'soho-supper-club',
     name: 'SoHo Supper Club',
     address: '64 Grand St, New York, NY',
@@ -125,6 +130,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-bar-5',
+    besttimeVenueId: 'bt-demo-nyc-bar-5',
     slug: 'tribeca-wine-room',
     name: 'Tribeca Wine Room',
     address: '31 N Moore St, New York, NY',
@@ -142,6 +148,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-bar-6',
+    besttimeVenueId: 'bt-demo-nyc-bar-6',
     slug: 'chelsea-dance-hall',
     name: 'Chelsea Dance Hall',
     address: '243 W 14th St, New York, NY',
@@ -159,6 +166,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-cafe-1',
+    besttimeVenueId: 'bt-demo-nyc-cafe-1',
     slug: 'nolita-espresso-counter',
     name: 'Nolita Espresso Counter',
     address: '234 Mott St, New York, NY',
@@ -176,6 +184,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-cafe-2',
+    besttimeVenueId: 'bt-demo-nyc-cafe-2',
     slug: 'union-square-coffee-lab',
     name: 'Union Square Coffee Lab',
     address: '36 E 13th St, New York, NY',
@@ -193,6 +202,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-cafe-3',
+    besttimeVenueId: 'bt-demo-nyc-cafe-3',
     slug: 'west-village-bakery-cafe',
     name: 'West Village Bakery Cafe',
     address: '77 7th Ave S, New York, NY',
@@ -210,6 +220,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-shop-1',
+    besttimeVenueId: 'bt-demo-nyc-shop-1',
     slug: 'soho-sneaker-market',
     name: 'SoHo Sneaker Market',
     address: '113 Spring St, New York, NY',
@@ -227,6 +238,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-shop-2',
+    besttimeVenueId: 'bt-demo-nyc-shop-2',
     slug: 'flatiron-design-store',
     name: 'Flatiron Design Store',
     address: '928 Broadway, New York, NY',
@@ -243,6 +255,7 @@ export const nycNightlifeVenues: Venue[] = [
   }),
   makeVenue({
     id: 'demo-nyc-shop-3',
+    besttimeVenueId: 'bt-demo-nyc-shop-3',
     slug: 'meatpacking-weekend-market',
     name: 'Meatpacking Weekend Market',
     address: '88 10th Ave, New York, NY',
