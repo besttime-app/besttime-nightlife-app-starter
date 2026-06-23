@@ -22,7 +22,7 @@ describe('seo helpers', () => {
       '@type': ['LocalBusiness', 'BarOrPub'],
       name: 'Lower East Side Cocktail Room',
       address: '128 Ludlow St, New York, NY',
-      url: 'http://localhost:3000/venues/lower-east-side-cocktail-room',
+      url: 'http://localhost:3000/venues/demo-nyc-bar-1',
       geo: {
         '@type': 'GeoCoordinates',
         latitude: 40.7209,

@@ -18,6 +18,8 @@ export const canonicalUrl = (path: string) => {
   return `${base}${normalizedPath}`
 }
 
+export const venueDetailPath = (venue: Pick<Venue, 'id'>) => `/venues/${encodeURIComponent(venue.id)}`
+
 export const serializeJsonLd = (data: JsonLdData) =>
   JSON.stringify(data).replace(/[<>&\u2028\u2029]/g, character => {
     switch (character) {
@@ -55,7 +57,7 @@ export const venueJsonLd = (venue: Venue): JsonLdData => {
     name: venue.name,
     description: venue.summary,
     address: venue.address,
-    url: canonicalUrl(`/venues/${venue.slug}`),
+    url: canonicalUrl(venueDetailPath(venue)),
     geo: {
       '@type': 'GeoCoordinates',
       latitude: venue.lat,

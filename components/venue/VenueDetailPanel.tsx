@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Activity, Clock3, ExternalLink, MapPin, Star } from 'lucide-react'
-import type { Venue } from '@/lib/types'
+import type { Venue, VenueDay } from '@/lib/types'
 
 type VenueDetailPanelProps = {
   venue?: Venue
@@ -16,6 +16,15 @@ export const getVenueWeekdayIndex = (date = new Date()) => (date.getDay() + 6) %
 
 export const getVenueDayForDate = (venue: Venue, date = new Date()) =>
   venue.week[getVenueWeekdayIndex(date)]
+
+const peakBusyness = (day: VenueDay) =>
+  day.hours.find(hour => hour.hour === day.peakHour)?.busyness ?? 0
+
+export const getRepresentativeVenueDay = (venue: Venue) =>
+  venue.week.reduce<VenueDay | undefined>((bestDay, day) => {
+    if (!bestDay) return day
+    return peakBusyness(day) > peakBusyness(bestDay) ? day : bestDay
+  }, undefined)
 
 export const getBusynessMetric = (venue: Venue) => {
   const hasLiveBusyness = venue.liveStatus === 'available' && venue.liveBusyness !== undefined
@@ -39,7 +48,7 @@ export function VenueDetailPanel({ venue }: VenueDetailPanelProps) {
   }
 
   const busynessMetric = getBusynessMetric(venue)
-  const today = getVenueDayForDate(venue)
+  const representativeDay = getRepresentativeVenueDay(venue)
 
   return (
     <section className="rounded-md border border-slate-200 bg-white p-4">
@@ -69,8 +78,8 @@ export function VenueDetailPanel({ venue }: VenueDetailPanelProps) {
         </div>
         <div className="rounded-md bg-slate-50 p-3">
           <Clock3 aria-hidden="true" className="h-4 w-4 text-slate-600" />
-          <p className="mt-2 text-xl font-semibold text-slate-950">{today ? hourLabel(today.peakHour) : '-'}</p>
-          <p className="text-xs font-medium text-slate-500">Peak today</p>
+          <p className="mt-2 text-xl font-semibold text-slate-950">{representativeDay ? hourLabel(representativeDay.peakHour) : '-'}</p>
+          <p className="text-xs font-medium text-slate-500">Forecast peak</p>
         </div>
       </div>
 

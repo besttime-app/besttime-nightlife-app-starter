@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
 
 vi.mock('server-only', () => ({}))
+vi.mock('@/components/map/VenueMap', () => ({
+  VenueMap: () => null
+}))
 
 import { allFixtureVenues } from '@/data/fixtures/nyc-nightlife'
-import { generateMetadata, generateStaticParams } from '@/app/(public)/venues/[venueId]/page'
+import VenuePage, { generateMetadata, generateStaticParams } from '@/app/(public)/venues/[venueId]/page'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -19,7 +23,7 @@ describe('venue detail page route helpers', () => {
     expect(params).toContainEqual({ venueId: venue.slug })
   })
 
-  it('generates canonical metadata for slug URLs', async () => {
+  it('generates canonical metadata for slug URLs with the stable venue id', async () => {
     const venue = allFixtureVenues[0]
     const metadata = await generateMetadata({
       params: Promise.resolve({ venueId: venue.slug })
@@ -28,15 +32,15 @@ describe('venue detail page route helpers', () => {
     expect(metadata.title).toContain(venue.name)
     expect(metadata.description).toContain(venue.city)
     expect(metadata.alternates).toMatchObject({
-      canonical: `/venues/${venue.slug}`
+      canonical: `/venues/${venue.id}`
     })
     expect(metadata.openGraph).toMatchObject({
       title: expect.stringContaining(venue.name),
-      url: `/venues/${venue.slug}`
+      url: `/venues/${venue.id}`
     })
   })
 
-  it('generates canonical metadata for fixture id URLs while preserving slug canonicals', async () => {
+  it('generates canonical metadata for fixture id URLs with the stable venue id', async () => {
     const venue = allFixtureVenues[0]
     const metadata = await generateMetadata({
       params: Promise.resolve({ venueId: venue.id })
@@ -44,10 +48,10 @@ describe('venue detail page route helpers', () => {
 
     expect(metadata.title).toContain(venue.name)
     expect(metadata.alternates).toMatchObject({
-      canonical: `/venues/${venue.slug}`
+      canonical: `/venues/${venue.id}`
     })
     expect(metadata.openGraph).toMatchObject({
-      url: `/venues/${venue.slug}`
+      url: `/venues/${venue.id}`
     })
   })
 
@@ -69,7 +73,36 @@ describe('venue detail page route helpers', () => {
 
     expect(metadata.title).toContain('Live Detail Room')
     expect(metadata.alternates).toMatchObject({
-      canonical: '/venues/live-detail-room'
+      canonical: '/venues/ven_live_detail_123'
     })
+    expect(metadata.openGraph).toMatchObject({
+      url: '/venues/ven_live_detail_123'
+    })
+  })
+
+  it('renders static detail labels without build-date today wording', async () => {
+    const venue = allFixtureVenues[0]
+
+    render(await VenuePage({
+      params: Promise.resolve({ venueId: venue.id })
+    }))
+
+    expect(screen.getByText('Forecast peak')).toBeInTheDocument()
+    expect(screen.getByText('Quiet forecast')).toBeInTheDocument()
+    expect(screen.queryByText('Peak today')).not.toBeInTheDocument()
+    expect(screen.queryByText('Quiet today')).not.toBeInTheDocument()
+  })
+
+  it('links generic BestTime API endpoints to the public BestTime homepage', async () => {
+    const venue = allFixtureVenues[0]
+
+    render(await VenuePage({
+      params: Promise.resolve({ venueId: venue.id })
+    }))
+
+    expect(screen.getByRole('link', { name: 'View BestTime data' })).toHaveAttribute(
+      'href',
+      'https://besttime.app'
+    )
   })
 })

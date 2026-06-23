@@ -5,12 +5,12 @@ import { Activity, ArrowLeft, Clock3, Database, MapPin, Star } from 'lucide-reac
 import { Attribution } from '@/components/app/Attribution'
 import { VenueMap } from '@/components/map/VenueMap'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { getBusynessMetric, getVenueDayForDate } from '@/components/venue/VenueDetailPanel'
+import { getBusynessMetric, getRepresentativeVenueDay } from '@/components/venue/VenueDetailPanel'
 import { VenueHeatmap } from '@/components/venue/VenueHeatmap'
 import { allFixtureVenues } from '@/data/fixtures/nyc-nightlife'
 import { getFixtureVenueById } from '@/lib/data/fixture-store'
 import { getVenueRepository } from '@/lib/data/repository'
-import { venueJsonLd } from '@/lib/seo'
+import { venueDetailPath, venueJsonLd } from '@/lib/seo'
 import type { Venue } from '@/lib/types'
 
 type VenuePageProps = {
@@ -33,7 +33,22 @@ const priceLabel = (priceLevel?: number) => {
   return '$'.repeat(priceLevel)
 }
 
-const venuePath = (venue: Venue) => `/venues/${venue.slug}`
+const visibleBestTimeDataUrl = (bestTimeUrl?: string) => {
+  if (!bestTimeUrl) return 'https://besttime.app'
+
+  try {
+    const parsed = new URL(bestTimeUrl)
+    if (parsed.pathname.toLowerCase().startsWith('/api/')) {
+      return 'https://besttime.app'
+    }
+  } catch {
+    return 'https://besttime.app'
+  }
+
+  return bestTimeUrl
+}
+
+const venuePath = (venue: Venue) => venueDetailPath(venue)
 
 const getVenueByRouteId = async (venueId: string) => {
   const fixtureVenue = getFixtureVenueById(venueId)
@@ -92,10 +107,10 @@ export default async function VenuePage({ params }: VenuePageProps) {
   if (!venue) notFound()
 
   const busynessMetric = getBusynessMetric(venue)
-  const today = getVenueDayForDate(venue)
-  const peakToday = today ? hourLabel(today.peakHour) : '-'
-  const quietToday = today ? hourLabel(today.quietHour) : '-'
-  const bestTimeUrl = venue.bestTimeUrl ?? 'https://besttime.app'
+  const representativeDay = getRepresentativeVenueDay(venue)
+  const forecastPeak = representativeDay ? hourLabel(representativeDay.peakHour) : '-'
+  const quietForecast = representativeDay ? hourLabel(representativeDay.quietHour) : '-'
+  const bestTimeUrl = visibleBestTimeDataUrl(venue.bestTimeUrl)
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -133,8 +148,8 @@ export default async function VenuePage({ params }: VenuePageProps) {
             <section aria-label="Venue metrics" className="grid grid-cols-2 gap-3">
               <Metric icon={<Activity aria-hidden="true" className="h-4 w-4 text-teal-700" />} label={busynessMetric.label} value={busynessMetric.value} />
               <Metric icon={<Star aria-hidden="true" className="h-4 w-4 text-amber-500" />} label={formatReviews(venue.reviews)} value={venue.rating?.toFixed(1) ?? '-'} />
-              <Metric icon={<Clock3 aria-hidden="true" className="h-4 w-4 text-slate-600" />} label="Peak today" value={peakToday} />
-              <Metric icon={<Clock3 aria-hidden="true" className="h-4 w-4 text-slate-600" />} label="Quiet today" value={quietToday} />
+              <Metric icon={<Clock3 aria-hidden="true" className="h-4 w-4 text-slate-600" />} label="Forecast peak" value={forecastPeak} />
+              <Metric icon={<Clock3 aria-hidden="true" className="h-4 w-4 text-slate-600" />} label="Quiet forecast" value={quietForecast} />
             </section>
           </div>
         </div>

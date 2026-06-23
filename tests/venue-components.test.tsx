@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { allFixtureVenues } from '@/data/fixtures/nyc-nightlife'
 import { VenueCard } from '@/components/venue/VenueCard'
-import { getBusynessMetric, getVenueDayForDate, VenueDetailPanel } from '@/components/venue/VenueDetailPanel'
+import { getBusynessMetric, getRepresentativeVenueDay, getVenueDayForDate, VenueDetailPanel } from '@/components/venue/VenueDetailPanel'
 import type { Venue } from '@/lib/types'
 
 const makeLiveStyleVenue = (): Venue => ({
@@ -51,6 +51,16 @@ describe('venue detail links and metrics', () => {
       label: 'Typical busyness',
       value: `${venue.busyness}%`
     })
+  })
+
+  it('labels the representative forecast peak without today wording', () => {
+    const venue = makeLiveStyleVenue()
+
+    render(<VenueDetailPanel venue={venue} />)
+
+    expect(screen.getByText('Forecast peak')).toBeInTheDocument()
+    expect(screen.queryByText('Peak today')).not.toBeInTheDocument()
+    expect(getRepresentativeVenueDay(venue)).toBe(venue.week[4])
   })
 
   it('maps the current weekday to the app Monday-first week array', () => {
