@@ -79,8 +79,8 @@ const normalizeDayProfile = (input: Record<string, unknown>): number[] => {
 }
 
 const buildDay = (profile: number[], dayInt: number): VenueDay => {
-  const hours: VenueHour[] = profile.map((busyness, hour) => ({
-    hour,
+  const hours: VenueHour[] = profile.map((busyness, index) => ({
+    hour: (index + 6) % 24,
     busyness: clampBusyness(busyness)
   }))
   const peak = hours.reduce((max, current) => (current.busyness > max.busyness ? current : max), hours[0])

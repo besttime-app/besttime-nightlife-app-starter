@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { listBestTimeVenues } from '@/lib/besttime/client'
+
+vi.mock('server-only', () => ({}))
+
+import { getBestTimeVenue, listBestTimeVenues } from '@/lib/besttime/client'
+import { BestTimeError, redactPrivateKey } from '@/lib/besttime/errors'
 import { mapBestTimeVenue } from '@/lib/besttime/mappers'
 import { getVenueRepository } from '@/lib/data/repository'
 
@@ -37,6 +41,45 @@ describe('BestTime mapping and repository', () => {
     expect(venue.primaryCategory).toBe('nightlife')
   })
 
+  it('maps BestTime hourly arrays from the 6AM forecast window', () => {
+    const profile = Array.from({ length: 24 }, () => 5)
+    profile[15] = 99
+
+    const venue = mapBestTimeVenue({
+      venue_id: 'ven_shifted_hours',
+      venue_name: 'Shifted Hours Bar',
+      venue_type: 'BAR',
+      day_raw_whole: profile
+    })
+
+    expect(venue.week[0].hours).toHaveLength(24)
+    expect(venue.week[0].hours[0]).toEqual({ hour: 6, busyness: 5 })
+    expect(venue.week[0].hours[15]).toEqual({ hour: 21, busyness: 99 })
+    expect(venue.week[0].peakHour).toBe(21)
+  })
+
+  it('maps BestTime venue_info detail responses', async () => {
+    vi.stubEnv('BESTTIME_API_KEY', 'pri_detail_secret')
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      status: 'OK',
+      venue_info: {
+        venue_id: 'ven_detail',
+        venue_name: 'Venue Info Bar',
+        venue_address: '55 Detail St, New York, NY',
+        venue_type: 'BAR'
+      }
+    }))))
+
+    const venue = await getBestTimeVenue('ven_detail')
+
+    expect(venue).toMatchObject({
+      id: 'ven_detail',
+      besttimeVenueId: 'ven_detail',
+      name: 'Venue Info Bar',
+      address: '55 Detail St, New York, NY'
+    })
+  })
+
   it('preserves the API base path and keeps private keys out of mapped venues', async () => {
     vi.stubEnv('BESTTIME_API_KEY', 'pri_test_secret')
     let requestedUrl: URL | undefined
@@ -64,6 +107,47 @@ describe('BestTime mapping and repository', () => {
     expect(venues).toHaveLength(1)
     expect(JSON.stringify(venues)).not.toContain('pri_test_secret')
     expect(JSON.stringify(venues)).not.toContain('pri_response_should_never_leak')
+  })
+
+  it('redacts nested private keys and active secrets', () => {
+    const redacted = redactPrivateKey({
+      Api_Key_Private: 'pri_object_secret',
+      nested: [
+        'https://besttime.app/api/v1/venues/filter?api_key_private=plain-secret&limit=1',
+        'prefix pri_pattern_secret suffix',
+        'plain-secret'
+      ]
+    }, 'plain-secret')
+
+    expect(JSON.stringify(redacted)).not.toContain('Api_Key_Private')
+    expect(JSON.stringify(redacted)).not.toContain('pri_object_secret')
+    expect(JSON.stringify(redacted)).not.toContain('plain-secret')
+    expect(JSON.stringify(redacted)).not.toContain('pri_pattern_secret')
+  })
+
+  it('redacts BestTime error details', async () => {
+    vi.stubEnv('BESTTIME_API_KEY', 'plain-active-secret')
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      status: 'error',
+      message: 'BestTime rejected api_key_private=plain-active-secret',
+      api_key_private: 'plain-active-secret',
+      nested: {
+        url: 'https://besttime.app/api/v1/venues/filter?API_KEY_PRIVATE=plain-active-secret',
+        list: ['pri_nested_secret']
+      }
+    }), { status: 200 })))
+
+    await expect(listBestTimeVenues({ category: 'nightlife', limit: 1 })).rejects.toMatchObject({
+      name: 'BestTimeError'
+    })
+
+    try {
+      await listBestTimeVenues({ category: 'nightlife', limit: 1 })
+    } catch (error) {
+      expect(error).toBeInstanceOf(BestTimeError)
+      expect(JSON.stringify((error as BestTimeError).details)).not.toContain('plain-active-secret')
+      expect(JSON.stringify((error as BestTimeError).details)).not.toContain('pri_nested_secret')
+    }
   })
 
   it('uses fixture repository when no API key exists', async () => {

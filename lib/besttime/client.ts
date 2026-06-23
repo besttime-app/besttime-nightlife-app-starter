@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { siteConfig } from '@/lib/config'
 import type { VenueFilters } from '@/lib/types'
 import { BestTimeError, redactPrivateKey } from './errors'
@@ -60,7 +62,7 @@ export const requestBestTime = async (
     ...init,
     cache: 'no-store'
   })
-  const json = redactPrivateKey(await readJson(response))
+  const json = redactPrivateKey(await readJson(response), apiKey)
   const status = typeof json === 'object' && json && 'status' in json ? String(json.status).toLowerCase() : undefined
   const message =
     typeof json === 'object' && json && 'message' in json && typeof json.message === 'string'
@@ -132,7 +134,12 @@ export const listBestTimeVenues = async (filters: Partial<VenueFilters> = {}) =>
 
 export const getBestTimeVenue = async (venueId: string) => {
   const json = await requestBestTime(`/venues/${encodeURIComponent(venueId)}`)
-  const venue = typeof json === 'object' && json && 'venue' in json ? json.venue : json
+  const venue =
+    typeof json === 'object' && json && 'venue' in json
+      ? json.venue
+      : typeof json === 'object' && json && 'venue_info' in json
+        ? json.venue_info
+        : json
 
   return mapBestTimeVenue((venue || {}) as Record<string, unknown>)
 }

@@ -10,18 +10,30 @@ export class BestTimeError extends Error {
   }
 }
 
-export const redactPrivateKey = (value: unknown): unknown => {
-  if (typeof value === 'string') {
-    return value.replace(/pri_[A-Za-z0-9_-]+/g, 'pri_[redacted]')
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const redactString = (value: string, activeSecret?: string): string => {
+  let redacted = value.replace(/(api_key_private=)[^&\s"'<>]+/gi, '$1[redacted]')
+
+  if (activeSecret) {
+    redacted = redacted.replace(new RegExp(escapeRegExp(activeSecret), 'g'), '[redacted]')
   }
 
-  if (Array.isArray(value)) return value.map(item => redactPrivateKey(item))
+  return redacted.replace(/pri_[A-Za-z0-9_-]+/g, 'pri_[redacted]')
+}
+
+export const redactPrivateKey = (value: unknown, activeSecret?: string): unknown => {
+  if (typeof value === 'string') {
+    return redactString(value, activeSecret)
+  }
+
+  if (Array.isArray(value)) return value.map(item => redactPrivateKey(item, activeSecret))
 
   if (value && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value)
-        .filter(([key]) => key !== 'api_key_private')
-        .map(([key, entry]) => [key, redactPrivateKey(entry)])
+        .filter(([key]) => key.toLowerCase() !== 'api_key_private')
+        .map(([key, entry]) => [key, redactPrivateKey(entry, activeSecret)])
     )
   }
 
