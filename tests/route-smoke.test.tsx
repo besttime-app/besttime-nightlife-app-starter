@@ -13,6 +13,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
 })
 
 describe('route data dependencies', () => {
@@ -40,6 +41,26 @@ describe('route data dependencies', () => {
     expect(response.status).toBe(200)
     expect(body.mode).toBe('demo')
     expect(body.venues).toHaveLength(2)
+  })
+
+  it('redacts live-mode route errors from the venues route handler', async () => {
+    const secret = 'pri_route_smoke_secret'
+    vi.stubEnv('BESTTIME_API_KEY', secret)
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error(`BestTime failed for api_key_private=${secret}`)
+    }))
+
+    const request = new NextRequest('http://localhost/api/besttime/venues?category=nightlife&limit=2')
+
+    const response = await getVenues(request)
+    const body = await response.json()
+    const bodyText = JSON.stringify(body)
+
+    expect(response.status).toBe(502)
+    expect(body.mode).toBe('live')
+    expect(body.error).toBeTruthy()
+    expect(bodyText).not.toContain(secret)
+    expect(bodyText).not.toContain(`api_key_private=${secret}`)
   })
 
   it('returns fixture venue detail through the detail route handler', async () => {
