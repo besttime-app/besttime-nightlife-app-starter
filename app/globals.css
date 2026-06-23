@@ -101,6 +101,11 @@ select {
 }
 
 @media (max-width: 767px) {
+  .maplibregl-ctrl-top-right {
+    margin-right: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
   .maplibregl-ctrl-bottom-left,
   .maplibregl-ctrl-bottom-right {
     margin-bottom: calc(44dvh + 5.75rem + env(safe-area-inset-bottom));

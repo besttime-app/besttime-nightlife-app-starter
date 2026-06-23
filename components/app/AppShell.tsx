@@ -166,7 +166,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
 
       <div className="relative flex h-full flex-col md:hidden">
         <MapCanvas venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={setSelectedVenueId} />
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 p-3">
+        <div className="pointer-events-none absolute left-0 right-[4.25rem] top-0 z-10 p-3">
           <div className="pointer-events-auto rounded-lg border border-white/70 bg-white/94 p-3 shadow-[var(--shadow-soft)] backdrop-blur">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
@@ -186,6 +186,9 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
         </div>
         <section className="safe-bottom fixed inset-x-0 bottom-[4.9rem] z-20 max-h-[44dvh] overflow-y-auto rounded-t-lg border-t border-slate-200 bg-slate-50 p-3 shadow-[0_-18px_45px_rgb(15_23_42/0.16)]">
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-300" />
+          <div className="mb-3">
+            <AdvancedFilters value={advanced} onChange={setAdvanced} />
+          </div>
           {error ? <p className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
           {selectedVenue ? <VenueDetailPanel venue={selectedVenue} /> : <VenueList venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={setSelectedVenueId} />}
           <div className="mt-3 flex justify-center">
