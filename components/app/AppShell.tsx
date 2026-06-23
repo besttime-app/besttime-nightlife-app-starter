@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { BarChart3, Building2, Database, Loader2, Map, MapPin } from 'lucide-react'
 import { Attribution } from '@/components/app/Attribution'
 import { BottomNav } from '@/components/app/BottomNav'
@@ -27,10 +28,10 @@ const defaultAdvancedFilters: AdvancedFilterState = {
 }
 
 const navItems = [
-  { label: 'Map', icon: Map, active: true },
-  { label: 'City', icon: Building2, active: false },
-  { label: 'Data', icon: Database, active: false },
-  { label: 'Admin', icon: BarChart3, active: false }
+  { label: 'Map', icon: Map, href: '/', active: true },
+  { label: 'City', icon: Building2, href: '/cities/new-york/nightlife', active: false },
+  { label: 'Data', icon: Database, href: '/about-data', active: false },
+  { label: 'Admin', icon: BarChart3, href: '/admin', active: false }
 ]
 
 export function AppShell({ initialMode, initialVenues, initialCategory, resultLimit }: AppShellProps) {
@@ -110,18 +111,19 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
         BT
       </div>
       <nav aria-label="Primary" className="grid gap-2">
-        {navItems.map(({ label, icon: Icon, active }) => (
-          <button
+        {navItems.map(({ label, icon: Icon, href, active }) => (
+          <Link
             key={label}
-            type="button"
+            href={href}
             title={label}
             aria-label={label}
+            aria-current={active ? 'page' : undefined}
             className={`grid h-11 w-11 place-items-center rounded-md transition ${
               active ? 'bg-teal-700 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950'
             }`}
           >
             <Icon aria-hidden="true" className="h-5 w-5" />
-          </button>
+          </Link>
         ))}
       </nav>
     </aside>
