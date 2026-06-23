@@ -52,8 +52,18 @@ describe('fixture store', () => {
 
   it('sorts friday-night with deterministic tie-breakers', () => {
     const venues = getFixtureVenues({ category: 'nightlife', quickFilter: 'friday-night', limit: 3 })
+    const fridayNightScores = venues.map(venue => venue.week[4].hours[21].busyness)
 
     expect(venues.map(venue => venue.id)).toEqual(['demo-nyc-bar-6', 'demo-nyc-bar-1', 'demo-nyc-bar-2'])
+    expect(fridayNightScores).toEqual([99, 96, 91])
+    expect(fridayNightScores).toEqual([...fridayNightScores].sort((a, b) => b - a))
+  })
+
+  it('provides varied friday-night demand for nightlife fixtures', () => {
+    const venues = getFixtureVenues({ category: 'nightlife' })
+    const fridayNightScores = venues.map(venue => venue.week[4].hours[21].busyness)
+
+    expect(new Set(fridayNightScores).size).toBeGreaterThan(1)
   })
 
   it('sorts quiet-spots by lower busyness', () => {

@@ -18,15 +18,20 @@ type FixtureVenueInput = {
   busyness: number
   liveBusyness?: number
   profile: number[]
+  fridayNightScore?: number
   summary: string
 }
 
-const buildWeek = (profile: number[]): VenueDay[] =>
+const clampBusyness = (value: number) => Math.max(0, Math.min(100, value))
+
+const buildWeek = (profile: number[], fridayNightScore?: number): VenueDay[] =>
   dayLabels.map((dayLabel, dayInt) => {
     const boost = dayInt === 4 || dayInt === 5 ? 12 : dayInt === 6 ? 4 : 0
     const hours = profile.map((value, hour) => ({
       hour,
-      busyness: Math.max(0, Math.min(100, value + boost))
+      busyness: dayInt === 4 && hour === 21 && fridayNightScore !== undefined
+        ? clampBusyness(fridayNightScore)
+        : clampBusyness(value + boost)
     }))
     const peak = hours.reduce((max, current) => (current.busyness > max.busyness ? current : max), hours[0])
     const quiet = hours.reduce((min, current) => (current.busyness < min.busyness ? current : min), hours[0])
@@ -44,14 +49,14 @@ const nightlifeProfile = [18, 12, 8, 5, 4, 3, 4, 5, 8, 10, 14, 18, 22, 26, 30, 3
 const cafeProfile = [4, 2, 1, 1, 4, 18, 46, 70, 78, 74, 68, 64, 72, 66, 54, 46, 38, 28, 18, 10, 6, 4, 3, 2]
 const shoppingProfile = [0, 0, 0, 0, 0, 2, 8, 20, 38, 54, 68, 76, 80, 78, 72, 68, 58, 42, 26, 14, 8, 4, 0, 0]
 
-const makeVenue = ({ profile, ...input }: FixtureVenueInput): Venue => ({
+const makeVenue = ({ profile, fridayNightScore, ...input }: FixtureVenueInput): Venue => ({
   ...input,
   city: 'New York',
   citySlug: 'new-york',
   liveStatus: input.liveBusyness === undefined ? 'unavailable' : 'available',
   hasFootTraffic: true,
   source: 'fixture',
-  week: buildWeek(profile),
+  week: buildWeek(profile, fridayNightScore),
   bestTimeUrl: 'https://besttime.app/api/v1/radar/filter'
 })
 
@@ -72,6 +77,7 @@ export const nycNightlifeVenues: Venue[] = [
     busyness: 82,
     liveBusyness: 88,
     profile: nightlifeProfile,
+    fridayNightScore: 96,
     summary: 'A late-night cocktail stop with strong Friday and Saturday peaks.'
   }),
   makeVenue({
@@ -90,6 +96,7 @@ export const nycNightlifeVenues: Venue[] = [
     busyness: 76,
     liveBusyness: 81,
     profile: nightlifeProfile,
+    fridayNightScore: 91,
     summary: 'A rooftop lounge with dinner-to-drinks traffic and a late evening peak.'
   }),
   makeVenue({
@@ -108,6 +115,7 @@ export const nycNightlifeVenues: Venue[] = [
     busyness: 64,
     liveBusyness: 59,
     profile: nightlifeProfile,
+    fridayNightScore: 84,
     summary: 'A music-led bar that stays quieter before 9 PM and fills after midnight.'
   }),
   makeVenue({
@@ -126,6 +134,7 @@ export const nycNightlifeVenues: Venue[] = [
     busyness: 71,
     liveBusyness: 73,
     profile: nightlifeProfile,
+    fridayNightScore: 88,
     summary: 'A polished supper club with earlier dinner traffic and a second late peak.'
   }),
   makeVenue({
@@ -144,6 +153,7 @@ export const nycNightlifeVenues: Venue[] = [
     busyness: 55,
     liveBusyness: 48,
     profile: nightlifeProfile,
+    fridayNightScore: 73,
     summary: 'A calmer wine bar option for date-night and after-work visits.'
   }),
   makeVenue({
@@ -162,6 +172,7 @@ export const nycNightlifeVenues: Venue[] = [
     busyness: 88,
     liveBusyness: 93,
     profile: nightlifeProfile,
+    fridayNightScore: 99,
     summary: 'A high-volume dance venue with the strongest late Friday night signal.'
   }),
   makeVenue({
