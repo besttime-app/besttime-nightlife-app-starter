@@ -184,7 +184,10 @@ export const listBestTimeVenues = async (filters: Partial<VenueFilters> = {}, cr
 }
 
 export const getBestTimeVenue = async (venueId: string, credentials: BestTimeCredentials = {}) => {
-  const json = await requestBestTime(`/venues/${encodeURIComponent(venueId)}`, {}, {}, credentials)
+  const normalizedCredentials = normalizeBestTimeCredentials(credentials)
+  const hasPublicKey = Boolean(normalizedCredentials.publicKey || process.env.BESTTIME_PUBLIC_API_KEY?.trim())
+  const detailAuthMode: BestTimeAuthMode = hasPublicKey ? 'public' : 'private'
+  const json = await requestBestTime(`/venues/${encodeURIComponent(venueId)}`, {}, {}, normalizedCredentials, detailAuthMode)
   const venue =
     typeof json === 'object' && json && 'venue' in json
       ? json.venue
@@ -193,8 +196,6 @@ export const getBestTimeVenue = async (venueId: string, credentials: BestTimeCre
         : json
 
   const venueRecord = (venue || {}) as Record<string, unknown>
-  const normalizedCredentials = normalizeBestTimeCredentials(credentials)
-  const hasPublicKey = Boolean(normalizedCredentials.publicKey || process.env.BESTTIME_PUBLIC_API_KEY?.trim())
 
   if (!hasPublicKey) return mapBestTimeVenue(venueRecord)
 

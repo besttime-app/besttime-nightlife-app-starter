@@ -12,6 +12,7 @@ import {
   browserApiKeyHeaders,
   browserApiKeysStorageKey,
   hasBrowserPrivateKey,
+  hasBrowserPublicKey,
   normalizeBrowserApiKeys,
   parseStoredBrowserApiKeys,
   type BrowserBestTimeApiKeys
@@ -55,8 +56,10 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const hasPrivateKey = hasBrowserPrivateKey(apiKeys)
-  const visibleError = !hasPrivateKey
-    ? 'Add a private BestTime API key to load live venue details from your browser session.'
+  const hasPublicKey = hasBrowserPublicKey(apiKeys)
+  const hasLiveDetailKeys = hasPrivateKey && hasPublicKey
+  const visibleError = !hasLiveDetailKeys
+    ? 'Add both your private and public BestTime API keys to load live venue details from your browser session.'
     : error
 
   const saveBrowserApiKeys = useCallback((keys: BrowserBestTimeApiKeys) => {
@@ -97,7 +100,7 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
   }, [venueId])
 
   useEffect(() => {
-    if (!hasPrivateKey) {
+    if (!hasLiveDetailKeys) {
       return
     }
 
@@ -138,7 +141,7 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
       window.clearTimeout(timeout)
       controller.abort()
     }
-  }, [apiKeyVersion, hasPrivateKey, headers, venueId])
+  }, [apiKeyVersion, hasLiveDetailKeys, headers, venueId])
 
   const trendHours = venue ? getTrendHours(venue) : []
   const currentDay = venue ? getVenueDayForDate(venue) : undefined

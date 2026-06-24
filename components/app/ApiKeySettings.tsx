@@ -94,7 +94,7 @@ export function ApiKeySettings({ keys, onClear, onSave, variant = 'desktop' }: A
               className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-teal-700 focus:ring-2 focus:ring-teal-700/15"
             />
             <span className="text-xs font-medium leading-5 text-slate-500">
-              Optional for public venue and forecast endpoints as the starter expands.
+              Required for live venue detail pages and weekly forecast heatmaps.
             </span>
           </label>
         </div>

@@ -30,6 +30,8 @@ export const parseStoredBrowserApiKeys = (stored: string | null): BrowserBestTim
 
 export const hasBrowserPrivateKey = (keys: BrowserBestTimeApiKeys) => Boolean(normalizeBrowserApiKeys(keys).privateKey)
 
+export const hasBrowserPublicKey = (keys: BrowserBestTimeApiKeys) => Boolean(normalizeBrowserApiKeys(keys).publicKey)
+
 export const browserApiKeyHeaders = (keys: BrowserBestTimeApiKeys) => {
   const normalized = normalizeBrowserApiKeys(keys)
   const headers: Record<string, string> = {}

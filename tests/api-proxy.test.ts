@@ -163,6 +163,9 @@ describe('BestTime mapping and repository', () => {
     const venue = await getBestTimeVenue('ven_detail_week', { publicKey: 'pub_detail_secret' })
 
     expect(requestedUrls).toHaveLength(2)
+    expect(requestedUrls[0]).toContain('/venues/ven_detail_week')
+    expect(requestedUrls[0]).toContain('api_key_public=pub_detail_secret')
+    expect(requestedUrls[0]).not.toContain('api_key_private=')
     expect(requestedUrls[1]).toContain('/forecasts/week/raw2')
     expect(requestedUrls[1]).toContain('api_key_public=pub_detail_secret')
     expect(venue.week[0].dayLabel).toBe('Monday')
