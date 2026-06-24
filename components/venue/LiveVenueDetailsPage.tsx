@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Database, Loader2, Radio } from 'lucide-react'
+import { ArrowLeft, Loader2, Radio } from 'lucide-react'
 import { ApiKeySettings } from '@/components/app/ApiKeySettings'
 import { Attribution } from '@/components/app/Attribution'
 import { VenueMap } from '@/components/map/VenueMap'
@@ -17,7 +17,7 @@ import {
   type BrowserBestTimeApiKeys
 } from '@/lib/api-key-overrides'
 import { liveDetailVenueStorageKey } from '@/lib/live-detail-storage'
-import type { AppMode, Venue, VenueHour } from '@/lib/types'
+import type { Venue, VenueHour } from '@/lib/types'
 import { formatHourLabel, getForecastBusyness, getVenueTypeLabel } from '@/lib/venue-display'
 
 type LiveVenueDetailsPageProps = {
@@ -52,7 +52,6 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
   const [apiKeys, setApiKeys] = useState<BrowserBestTimeApiKeys>({})
   const [apiKeyVersion, setApiKeyVersion] = useState(0)
   const [venue, setVenue] = useState<Venue | undefined>()
-  const [mode, setMode] = useState<AppMode>('demo')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const hasPrivateKey = hasBrowserPrivateKey(apiKeys)
@@ -85,7 +84,6 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
 
       if (cachedVenue) {
         setVenue(cachedVenue)
-        setMode('live')
       }
       if (!normalizedKeys.privateKey && !normalizedKeys.publicKey) return
 
@@ -119,11 +117,10 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
           headers,
           signal: controller.signal
         })
-        const body = await response.json() as { mode?: AppMode; venue?: Venue; error?: string }
+        const body = await response.json() as { venue?: Venue; error?: string }
 
         if (!response.ok || !body.venue) throw new Error(body.error || 'Unable to load live venue details')
 
-        setMode(body.mode || 'live')
         setVenue(body.venue)
       } catch (fetchError) {
         if (controller.signal.aborted && !timedOut) return
@@ -160,25 +157,6 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
           </Link>
           <ApiKeySettings keys={apiKeys} onClear={clearBrowserApiKeys} onSave={saveBrowserApiKeys} />
         </div>
-
-        <section className="rounded-[24px] border border-teal-100 bg-white/90 p-4 shadow-[0_18px_50px_rgb(22_34_62_/_0.10)] sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.08em] text-teal-700">Browser API key live detail</p>
-              <h1 className="mt-1 text-2xl font-semibold text-[#1d2b4f]">
-                {venue?.name || 'Live BestTime venue'}
-              </h1>
-            </div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-600">
-              <Database aria-hidden="true" className="h-3.5 w-3.5" />
-              {mode === 'live' ? 'BestTime API' : 'Waiting for key'}
-            </span>
-          </div>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-            This route is client-side because browser-stored demo keys cannot be read by server-rendered SEO pages.
-            For production, move the private key to Vercel or `.env.local` and keep public venue pages server-rendered.
-          </p>
-        </section>
 
         {isLoading ? (
           <div className="inline-flex items-center gap-2 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">

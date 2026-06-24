@@ -220,7 +220,7 @@ test('browser-key live results use client-side live detail links', async ({ page
   await page.getByRole('link', { name: 'Details' }).first().click()
   await expect(page).toHaveURL(/\/live\/venues\/ven_e2e_live$/)
   await expect(page.getByRole('heading', { name: 'E2E Live Bar' }).first()).toBeVisible()
-  await expect(page.getByText('Browser API key live detail')).toBeVisible()
+  await expect(page.getByText('Browser API key live detail')).toBeHidden()
 })
 
 test('mobile filters and detail CTA remain reachable above navigation', async ({ page }, testInfo) => {
