@@ -8,6 +8,7 @@ type MapCanvasProps = {
   venues: Venue[]
   selectedVenueId?: string
   onSelectVenue: (venueId: string) => void
+  onMapInteract?: () => void
 }
 
 const mapStyle = 'https://tiles.openfreemap.org/styles/liberty'
@@ -47,12 +48,17 @@ const venueFeatureCollection = (venues: Venue[], selectedVenueId?: string): Venu
   }))
 })
 
-export function MapCanvas({ venues, selectedVenueId, onSelectVenue }: MapCanvasProps) {
+export function MapCanvas({ venues, selectedVenueId, onMapInteract, onSelectVenue }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
   const lastFitVenueIdsRef = useRef('')
+  const onMapInteractRef = useRef(onMapInteract)
   const onSelectVenueRef = useRef(onSelectVenue)
   const [mapReady, setMapReady] = useState(false)
+
+  useEffect(() => {
+    onMapInteractRef.current = onMapInteract
+  }, [onMapInteract])
 
   useEffect(() => {
     onSelectVenueRef.current = onSelectVenue
@@ -173,7 +179,11 @@ export function MapCanvas({ venues, selectedVenueId, onSelectVenue }: MapCanvasP
   }, [mapReady, venues, selectedVenueId])
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-slate-200">
+    <div
+      className="relative h-full w-full overflow-hidden bg-slate-200"
+      onPointerDownCapture={() => onMapInteractRef.current?.()}
+      onWheelCapture={() => onMapInteractRef.current?.()}
+    >
       <div ref={containerRef} className="h-full w-full" aria-label="Venue map" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/70 to-transparent" />
     </div>

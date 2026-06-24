@@ -117,8 +117,14 @@ test('mobile filters and detail CTA remain reachable above navigation', async ({
   await page.getByRole('button', { name: 'Explore NYC demo' }).click()
   await expect(page.locator('.maplibregl-ctrl-zoom-in:visible').first()).toBeVisible()
   await expect(page.locator('.maplibregl-ctrl-attrib:visible').first()).toBeVisible()
+  const mobileSheet = page.getByTestId('mobile-venue-sheet')
+  await expect(mobileSheet).toHaveAttribute('data-state', 'half')
+  await page.locator('.maplibregl-ctrl-zoom-out:visible').first().click()
+  await expect(mobileSheet).toHaveAttribute('data-state', 'peek')
+  await page.getByTestId('mobile-sheet-toggle').click()
+  await expect(mobileSheet).toHaveAttribute('data-state', 'half')
 
-  await page.locator('summary:visible').filter({ hasText: 'Advanced filters' }).click()
+  await mobileSheet.locator('summary').filter({ hasText: 'Advanced filters' }).click()
   await expect(page.locator('select:visible').first()).toBeVisible()
 
   const detailsLink = page.getByRole('link', { name: /Details/i }).first()

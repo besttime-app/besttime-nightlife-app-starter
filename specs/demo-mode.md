@@ -20,6 +20,8 @@ The starter must work immediately without a BestTime API key so developers can e
 - Demo map/API results should keep the default visible result limit modest so mobile browsers do not render all fixture markers at once.
 - Category and quick filters must work against the full fixture pool while returning a bounded result set.
 - Discovery-map venue dots should be rendered as map-native layers or equivalent map-synchronized primitives so pitch, bearing, and zoom cannot desynchronize them from the basemap.
+- Mobile discovery uses a lightweight bottom sheet with peek, half, and full states. Real map interactions should collapse the sheet to the compact peek state, while venue selection should reopen enough detail to inspect the venue.
+- Selecting a venue from the map or list should make the updated detail card visually noticeable without blocking map interaction.
 
 ## SEO Behavior
 

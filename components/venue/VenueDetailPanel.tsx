@@ -4,6 +4,7 @@ import type { Venue, VenueDay } from '@/lib/types'
 
 type VenueDetailPanelProps = {
   venue?: Venue
+  highlight?: boolean
 }
 
 const hourLabel = (hour: number) => {
@@ -35,7 +36,7 @@ export const getBusynessMetric = (venue: Venue) => {
   }
 }
 
-export function VenueDetailPanel({ venue }: VenueDetailPanelProps) {
+export function VenueDetailPanel({ highlight = false, venue }: VenueDetailPanelProps) {
   if (!venue) {
     return (
       <section className="rounded-md border border-slate-200 bg-white p-4">
@@ -51,7 +52,10 @@ export function VenueDetailPanel({ venue }: VenueDetailPanelProps) {
   const representativeDay = getRepresentativeVenueDay(venue)
 
   return (
-    <section className="rounded-md border border-slate-200 bg-white p-4">
+    <section
+      className={`rounded-md border border-slate-200 bg-white p-4 ${highlight ? 'venue-selection-flash' : ''}`}
+      data-highlight={highlight ? 'selection' : undefined}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold leading-6 text-slate-950">{venue.name}</h2>

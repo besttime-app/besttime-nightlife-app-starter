@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import Link from 'next/link'
-import { BarChart3, Building2, Database, Loader2, Map, MapPin } from 'lucide-react'
+import { BarChart3, Building2, ChevronUp, Database, Loader2, Map, MapPin } from 'lucide-react'
 import { Attribution } from '@/components/app/Attribution'
 import { BottomNav } from '@/components/app/BottomNav'
 import { LocationModal } from '@/components/app/LocationModal'
@@ -10,7 +10,7 @@ import { AdvancedFilters, type AdvancedFilterState } from '@/components/filters/
 import { CategoryChips } from '@/components/filters/CategoryChips'
 import { QuickFilters } from '@/components/filters/QuickFilters'
 import { MapCanvas } from '@/components/map/MapCanvas'
-import { VenueDetailPanel } from '@/components/venue/VenueDetailPanel'
+import { getBusynessMetric, VenueDetailPanel } from '@/components/venue/VenueDetailPanel'
 import { VenueList } from '@/components/venue/VenueList'
 import type { AppMode, Venue, VenueCategory, VenueFilters } from '@/lib/types'
 
@@ -35,6 +35,7 @@ type BrowserLocation = {
 }
 
 type LocationState = typeof demoLocation | ({ kind: 'browser' } & BrowserLocation)
+type MobileSheetState = 'peek' | 'half' | 'full'
 
 const buildVenueSearchParams = ({
   advanced,
@@ -71,6 +72,23 @@ const navItems = [
   { label: 'Admin', icon: BarChart3, href: '/admin', active: false }
 ]
 
+const mobileSheetHeightClass: Record<MobileSheetState, string> = {
+  peek: 'h-[8.75rem]',
+  half: 'h-[46dvh]',
+  full: 'h-[82dvh]'
+}
+
+const expandMobileSheet = (current: MobileSheetState): MobileSheetState => {
+  if (current === 'peek') return 'half'
+  if (current === 'half') return 'full'
+  return 'full'
+}
+
+const collapseMobileSheet = (current: MobileSheetState): MobileSheetState => {
+  if (current === 'full') return 'half'
+  return 'peek'
+}
+
 export function AppShell({ initialMode, initialVenues, initialCategory, resultLimit }: AppShellProps) {
   const [mode, setMode] = useState<AppMode>(initialMode)
   const [venues, setVenues] = useState<Venue[]>(initialVenues)
@@ -82,6 +100,11 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
   const [locationPromptKey, setLocationPromptKey] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | undefined>()
+  const [mobileSheetState, setMobileSheetState] = useState<MobileSheetState>('half')
+  const [selectionPulse, setSelectionPulse] = useState(0)
+  const sheetDragStartYRef = useRef<number | null>(null)
+  const ignoreNextSheetClickRef = useRef(false)
+  const lastSheetInteractionAtRef = useRef(0)
   const initialVenueSearchKeyRef = useRef(
     buildVenueSearchParams({
       advanced: defaultAdvancedFilters,
@@ -107,6 +130,51 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
 
   const openLocationPrompt = useCallback(() => {
     setLocationPromptKey(current => current + 1)
+  }, [])
+
+  const selectVenue = useCallback((venueId: string) => {
+    setSelectedVenueId(venueId)
+    setSelectionPulse(current => current + 1)
+    setMobileSheetState('half')
+  }, [])
+
+  const handleMobileMapInteraction = useCallback(() => {
+    if (Date.now() - lastSheetInteractionAtRef.current < 500) return
+    setMobileSheetState('peek')
+  }, [])
+
+  const handleSheetToggle = useCallback(() => {
+    lastSheetInteractionAtRef.current = Date.now()
+    if (ignoreNextSheetClickRef.current) {
+      ignoreNextSheetClickRef.current = false
+      return
+    }
+
+    setMobileSheetState(current => current === 'full' ? 'half' : expandMobileSheet(current))
+  }, [])
+
+  const handleSheetDragStart = useCallback((event: PointerEvent<HTMLSpanElement>) => {
+    lastSheetInteractionAtRef.current = Date.now()
+    sheetDragStartYRef.current = event.clientY
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }, [])
+
+  const handleSheetDragEnd = useCallback((event: PointerEvent<HTMLSpanElement>) => {
+    const startY = sheetDragStartYRef.current
+    sheetDragStartYRef.current = null
+    if (startY === null) return
+
+    const deltaY = event.clientY - startY
+    if (deltaY > 36) {
+      lastSheetInteractionAtRef.current = Date.now()
+      ignoreNextSheetClickRef.current = true
+      setMobileSheetState(collapseMobileSheet)
+    }
+    if (deltaY < -36) {
+      lastSheetInteractionAtRef.current = Date.now()
+      ignoreNextSheetClickRef.current = true
+      setMobileSheetState(expandMobileSheet)
+    }
   }, [])
 
   useEffect(() => {
@@ -160,6 +228,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
 
   const selectedVenue = visibleVenues.find(venue => venue.id === selectedVenueId) ?? visibleVenues[0]
   const effectiveSelectedVenueId = selectedVenue?.id
+  const selectedVenueBusyness = selectedVenue ? getBusynessMetric(selectedVenue) : undefined
   const locationLabel = location.kind === 'browser' ? 'Near you' : 'NYC'
   const modeLabel = mode === 'live' ? 'Live data' : location.kind === 'browser' ? 'Near you demo' : 'NYC demo'
 
@@ -200,7 +269,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
       <div className="hidden h-full grid-cols-[4.5rem_minmax(0,1fr)_24rem] grid-rows-[minmax(0,1fr)] md:grid">
         {desktopNav}
         <section className="relative min-h-0 min-w-0">
-          <MapCanvas venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={setSelectedVenueId} />
+          <MapCanvas venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={selectVenue} />
           <div className="pointer-events-none absolute left-4 top-4 z-10 w-[min(42rem,calc(100%-2rem))]">
             <div className="pointer-events-auto rounded-lg border border-white/70 bg-white/92 p-3 shadow-[var(--shadow-soft)] backdrop-blur">
               {filterPanel}
@@ -234,16 +303,21 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
             {error ? <p className="mt-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            <VenueDetailPanel venue={selectedVenue} />
+            <VenueDetailPanel key={`${effectiveSelectedVenueId ?? 'empty'}-${selectionPulse}`} venue={selectedVenue} highlight={selectionPulse > 0} />
             <div className="mt-4">
-              <VenueList venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={setSelectedVenueId} />
+              <VenueList venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={selectVenue} />
             </div>
           </div>
         </aside>
       </div>
 
       <div className="relative flex h-full flex-col md:hidden">
-        <MapCanvas venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={setSelectedVenueId} />
+        <MapCanvas
+          venues={visibleVenues}
+          selectedVenueId={effectiveSelectedVenueId}
+          onMapInteract={handleMobileMapInteraction}
+          onSelectVenue={selectVenue}
+        />
         <div className="pointer-events-none absolute left-0 right-[4.25rem] top-0 z-10 p-3">
           <div className="pointer-events-auto rounded-lg border border-white/70 bg-white/94 p-3 shadow-[var(--shadow-soft)] backdrop-blur">
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -267,15 +341,55 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
             </div>
           </div>
         </div>
-        <section className="safe-bottom fixed inset-x-0 bottom-[4.9rem] z-20 max-h-[44dvh] overflow-y-auto rounded-t-lg border-t border-slate-200 bg-slate-50 p-3 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+1rem))] scroll-pb-6 shadow-[0_-18px_45px_rgb(15_23_42/0.16)]">
-          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-300" />
-          <div className="mb-3">
-            <AdvancedFilters value={advanced} onChange={setAdvanced} />
-          </div>
-          {error ? <p className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
-          {selectedVenue ? <VenueDetailPanel venue={selectedVenue} /> : <VenueList venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={setSelectedVenueId} />}
-          <div className="mt-3 flex justify-center">
-            <Attribution />
+        <section
+          className={`safe-bottom fixed inset-x-0 bottom-[4.9rem] z-20 flex flex-col overflow-hidden rounded-t-lg border-t border-slate-200 bg-slate-50 shadow-[0_-18px_45px_rgb(15_23_42/0.16)] transition-[height] duration-200 ease-out ${mobileSheetHeightClass[mobileSheetState]}`}
+          data-state={mobileSheetState}
+          data-testid="mobile-venue-sheet"
+        >
+          <button
+            type="button"
+            aria-label="Resize venue sheet"
+            className="grid shrink-0 gap-3 px-3 pb-3 pt-2 text-left"
+            data-testid="mobile-sheet-toggle"
+            onClick={handleSheetToggle}
+          >
+            <span
+              className="mx-auto h-1.5 w-12 rounded-full bg-slate-300"
+              aria-hidden="true"
+              onPointerDown={handleSheetDragStart}
+              onPointerUp={handleSheetDragEnd}
+              onPointerCancel={() => {
+                sheetDragStartYRef.current = null
+              }}
+            />
+            <span className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-slate-950">
+                  {selectedVenue?.name ?? 'Select a venue'}
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-slate-500">
+                  {selectedVenueBusyness ? `${selectedVenueBusyness.value} ${selectedVenueBusyness.label.toLowerCase()}` : `${visibleVenues.length} venues nearby`}
+                </span>
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+                {mobileSheetState === 'full' ? 'Less' : 'More'}
+                <ChevronUp aria-hidden="true" className={`h-3.5 w-3.5 transition ${mobileSheetState === 'full' ? 'rotate-180' : ''}`} />
+              </span>
+            </span>
+          </button>
+          <div className={`min-h-0 flex-1 overflow-y-auto px-3 pb-[max(1.25rem,calc(env(safe-area-inset-bottom)+1rem))] scroll-pb-6 ${mobileSheetState === 'peek' ? 'hidden' : 'block'}`}>
+            <div className="mb-3">
+              <AdvancedFilters value={advanced} onChange={setAdvanced} />
+            </div>
+            {error ? <p className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
+            {selectedVenue ? (
+              <VenueDetailPanel key={`${effectiveSelectedVenueId ?? 'empty'}-${selectionPulse}-mobile`} venue={selectedVenue} highlight={selectionPulse > 0} />
+            ) : (
+              <VenueList venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={selectVenue} />
+            )}
+            <div className="mt-3 flex justify-center">
+              <Attribution />
+            </div>
           </div>
         </section>
         <BottomNav />

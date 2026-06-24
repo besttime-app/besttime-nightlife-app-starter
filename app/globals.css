@@ -95,6 +95,30 @@ select {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+@keyframes venue-selection-flash {
+  0% {
+    background: #f0fdfa;
+    border-color: #0f766e;
+    box-shadow: 0 0 0 0 rgb(15 118 110 / 0.36);
+  }
+
+  55% {
+    background: #ffffff;
+    border-color: #5eead4;
+    box-shadow: 0 0 0 7px rgb(15 118 110 / 0.16);
+  }
+
+  100% {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 0 0 0 rgb(15 118 110 / 0);
+  }
+}
+
+.venue-selection-flash {
+  animation: venue-selection-flash 900ms ease-out;
+}
+
 .maplibregl-ctrl-bottom-left,
 .maplibregl-ctrl-bottom-right {
   margin-bottom: 0.75rem;
@@ -108,6 +132,13 @@ select {
 
   .maplibregl-ctrl-bottom-left,
   .maplibregl-ctrl-bottom-right {
-    margin-bottom: calc(44dvh + 5.75rem + env(safe-area-inset-bottom));
+    margin-bottom: calc(8.75rem + 5.75rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .venue-selection-flash {
+    animation: none;
+    border-color: #0f766e;
   }
 }
