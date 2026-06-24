@@ -5,6 +5,7 @@ import { Attribution } from '@/components/app/Attribution'
 import { getFixtureVenues } from '@/lib/data/fixture-store'
 import { canonicalUrl } from '@/lib/seo'
 import type { Venue } from '@/lib/types'
+import { getVenueTypeLabel } from '@/lib/venue-display'
 
 const pagePath = '/cities/new-york/nightlife'
 const pageTitle = 'New York nightlife foot traffic starter'
@@ -81,6 +82,7 @@ export default function NewYorkNightlifePage() {
 
 function CityVenueLink({ venue }: { venue: Venue }) {
   const busyness = venue.liveBusyness ?? venue.busyness
+  const venueType = getVenueTypeLabel(venue)
 
   return (
     <Link
@@ -96,7 +98,7 @@ function CityVenueLink({ venue }: { venue: Venue }) {
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold capitalize text-slate-700">
-          {venue.primaryCategory}
+          {venueType}
         </span>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-slate-600">

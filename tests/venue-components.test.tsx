@@ -4,6 +4,7 @@ import { allFixtureVenues } from '@/data/fixtures/nyc-nightlife'
 import { VenueCard } from '@/components/venue/VenueCard'
 import { getBusynessMetric, getRepresentativeVenueDay, getVenueDayForDate, VenueDetailPanel } from '@/components/venue/VenueDetailPanel'
 import type { Venue } from '@/lib/types'
+import { getVenueTypeLabel } from '@/lib/venue-display'
 
 const makeLiveStyleVenue = (): Venue => ({
   ...allFixtureVenues[0],
@@ -68,6 +69,19 @@ describe('venue detail links and metrics', () => {
     }, venue.week[0])
 
     expect(getRepresentativeVenueDay(venue)).toBe(expectedDay)
+  })
+
+  it('shows a refined venue type instead of only the broad discovery category', () => {
+    const venue: Venue = {
+      ...allFixtureVenues[0],
+      primaryCategory: 'nightlife',
+      venueType: 'BAR'
+    }
+
+    render(<VenueDetailPanel venue={venue} />)
+
+    expect(screen.getByText('Bar')).toBeInTheDocument()
+    expect(getVenueTypeLabel(venue)).toBe('Bar')
   })
 
   it('maps the current weekday to the app Monday-first week array', () => {

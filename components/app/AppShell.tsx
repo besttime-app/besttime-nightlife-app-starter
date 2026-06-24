@@ -57,6 +57,8 @@ const buildVenueSearchParams = ({
   })
 
   if (quickFilter) params.set('quickFilter', quickFilter)
+  if (advanced.dayInt !== undefined) params.set('dayInt', String(advanced.dayInt))
+  if (advanced.hour !== undefined) params.set('hour', String(advanced.hour))
   if (location.kind === 'browser') {
     params.set('lat', String(location.lat))
     params.set('lng', String(location.lng))

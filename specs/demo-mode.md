@@ -19,9 +19,11 @@ The starter must work immediately without a BestTime API key so developers can e
 - Browser-location failures must explain whether permission is blocked, location is unavailable, or lookup timed out, and must keep retry plus NYC demo fallback available.
 - Demo map/API results should keep the default visible result limit modest so mobile browsers do not render all fixture markers at once.
 - Category and quick filters must work against the full fixture pool while returning a bounded result set.
+- Advanced filters may rank venues by selected forecast day and time. This ranking should use fixture forecast arrays in demo mode and `day_int` plus hour parameters in live mode.
 - Discovery-map venue dots should be rendered as map-native layers or equivalent map-synchronized primitives so pitch, bearing, and zoom cannot desynchronize them from the basemap.
 - Mobile discovery uses a lightweight bottom sheet with peek, half, and full states. Real map interactions should collapse the sheet to the compact peek state, while venue selection should reopen enough detail to inspect the venue.
 - Selecting a venue from the map or list should make the updated detail card visually noticeable without blocking map interaction.
+- Venue cards, map detail panels, and public venue pages should show a refined venue type label such as `Bar`, `Bakery`, or `Shopping center` when source data or safe inference supports it, rather than only the broad starter category.
 
 ## SEO Behavior
 
@@ -29,6 +31,7 @@ The starter must work immediately without a BestTime API key so developers can e
 - Sitemap and static generation should include canonical fixture venue ID routes only.
 - Slug routes may resolve dynamically, but their canonical URL should point to the stable venue ID route to avoid duplicate indexed pages.
 - Venue JSON-LD should match the primary venue category: nightlife as `BarOrPub`, cafes as `CafeOrCoffeeShop`, shopping as `Store`, and popular as generic `LocalBusiness`.
+- Venue detail pages should expose a crawlable data-focused layout with live/current-hour metrics, current-day forecast, compact map context, and weekly heatmap.
 
 ## Live Mode Boundary
 

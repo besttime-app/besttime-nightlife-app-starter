@@ -28,6 +28,13 @@ const parseNumber = (value: string | null): number | undefined => {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
+const parseIntegerInRange = (value: string | null, min: number, max: number): number | undefined => {
+  if (!value) return undefined
+
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed >= min && parsed <= max ? parsed : undefined
+}
+
 const getErrorStatus = (error: unknown) => {
   const status = (error as { status?: unknown }).status
   return typeof status === 'number' ? status : 500
@@ -51,7 +58,9 @@ export async function GET(request: NextRequest) {
       limit: parsePositiveNumber(searchParams.get('limit')),
       lat: parseNumber(searchParams.get('lat')),
       lng: parseNumber(searchParams.get('lng')),
-      radius: parsePositiveNumber(searchParams.get('radius'))
+      radius: parsePositiveNumber(searchParams.get('radius')),
+      dayInt: parseIntegerInRange(searchParams.get('dayInt'), 0, 6),
+      hour: parseIntegerInRange(searchParams.get('hour'), 0, 23)
     }
     const venues = await repository.listVenues(filters)
 

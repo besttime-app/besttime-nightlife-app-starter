@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Activity, MapPin, Star } from 'lucide-react'
 import type { Venue } from '@/lib/types'
+import { getVenueTypeLabel } from '@/lib/venue-display'
 
 type VenueCardProps = {
   venue: Venue
@@ -15,6 +16,7 @@ const formatReviews = (reviews?: number) => {
 
 export function VenueCard({ venue, selected = false, onSelect }: VenueCardProps) {
   const busyness = venue.liveBusyness ?? venue.busyness
+  const venueType = getVenueTypeLabel(venue)
 
   return (
     <article
@@ -32,7 +34,7 @@ export function VenueCard({ venue, selected = false, onSelect }: VenueCardProps)
             </p>
           </div>
           <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold capitalize text-slate-700">
-            {venue.primaryCategory}
+            {venueType}
           </span>
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-600">

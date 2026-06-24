@@ -28,6 +28,7 @@ describe('BestTime mapping and repository', () => {
     })
 
     expect(venue.id).toBe('ven_test')
+    expect(venue.venueType).toBe('BAR')
     expect(JSON.stringify(venue)).not.toContain('pri_should_never_leak')
   })
 
@@ -125,11 +126,14 @@ describe('BestTime mapping and repository', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const venues = await listBestTimeVenues({ category: 'nightlife', limit: 1 })
+    const venues = await listBestTimeVenues({ category: 'nightlife', limit: 1, dayInt: 5, hour: 22 })
 
     if (!requestedUrl) throw new Error('Expected BestTime fetch to be called')
     expect(requestedUrl.href).toContain('/api/v1/venues/filter')
     expect(requestedUrl.searchParams.get('api_key_private')).toBe('pri_test_secret')
+    expect(requestedUrl.searchParams.get('day_int')).toBe('5')
+    expect(requestedUrl.searchParams.get('hour_min')).toBe('22')
+    expect(requestedUrl.searchParams.get('hour_max')).toBe('22')
     expect(venues).toHaveLength(1)
     expect(JSON.stringify(venues)).not.toContain('pri_test_secret')
     expect(JSON.stringify(venues)).not.toContain('pri_response_should_never_leak')

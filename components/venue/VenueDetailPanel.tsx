@@ -1,16 +1,11 @@
 import Link from 'next/link'
 import { Activity, Clock3, ExternalLink, MapPin, Star } from 'lucide-react'
 import type { Venue, VenueDay } from '@/lib/types'
+import { formatHourLabel, getVenueTypeLabel } from '@/lib/venue-display'
 
 type VenueDetailPanelProps = {
   venue?: Venue
   highlight?: boolean
-}
-
-const hourLabel = (hour: number) => {
-  if (hour === 0) return '12 AM'
-  if (hour === 12) return '12 PM'
-  return hour > 12 ? `${hour - 12} PM` : `${hour} AM`
 }
 
 export const getVenueWeekdayIndex = (date = new Date()) => (date.getDay() + 6) % 7
@@ -50,6 +45,7 @@ export function VenueDetailPanel({ highlight = false, venue }: VenueDetailPanelP
 
   const busynessMetric = getBusynessMetric(venue)
   const representativeDay = getRepresentativeVenueDay(venue)
+  const venueType = getVenueTypeLabel(venue)
 
   return (
     <section
@@ -65,7 +61,7 @@ export function VenueDetailPanel({ highlight = false, venue }: VenueDetailPanelP
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold capitalize text-slate-700">
-          {venue.primaryCategory}
+          {venueType}
         </span>
       </div>
 
@@ -82,7 +78,7 @@ export function VenueDetailPanel({ highlight = false, venue }: VenueDetailPanelP
         </div>
         <div className="rounded-md bg-slate-50 p-3">
           <Clock3 aria-hidden="true" className="h-4 w-4 text-slate-600" />
-          <p className="mt-2 text-xl font-semibold text-slate-950">{representativeDay ? hourLabel(representativeDay.peakHour) : '-'}</p>
+          <p className="mt-2 text-xl font-semibold text-slate-950">{representativeDay ? formatHourLabel(representativeDay.peakHour) : '-'}</p>
           <p className="text-xs font-medium text-slate-500">Forecast peak</p>
         </div>
       </div>

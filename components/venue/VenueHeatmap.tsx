@@ -1,13 +1,8 @@
 import type { VenueDay } from '@/lib/types'
+import { formatCompactHourLabel } from '@/lib/venue-display'
 
 type VenueHeatmapProps = {
   week: VenueDay[]
-}
-
-const hourLabel = (hour: number) => {
-  if (hour === 0) return '12a'
-  if (hour === 12) return '12p'
-  return hour > 12 ? `${hour - 12}p` : `${hour}a`
 }
 
 const heatClass = (busyness: number) => {
@@ -46,7 +41,7 @@ export function VenueHeatmap({ week }: VenueHeatmapProps) {
             <div aria-hidden="true" />
             {hours.map(hour => (
               <div key={hour} className="text-center text-[0.68rem] font-semibold text-slate-500">
-                {hourLabel(hour)}
+                {formatCompactHourLabel(hour)}
               </div>
             ))}
 
@@ -58,8 +53,8 @@ export function VenueHeatmap({ week }: VenueHeatmapProps) {
                 {day.hours.map(hour => (
                   <div
                     key={`${day.dayInt}-${hour.hour}`}
-                    aria-label={`${day.dayLabel} ${hourLabel(hour.hour)} ${hour.busyness}% busy`}
-                    title={`${day.dayLabel} ${hourLabel(hour.hour)}: ${hour.busyness}% busy`}
+                    aria-label={`${day.dayLabel} ${formatCompactHourLabel(hour.hour)} ${hour.busyness}% busy`}
+                    title={`${day.dayLabel} ${formatCompactHourLabel(hour.hour)}: ${hour.busyness}% busy`}
                     className={`flex h-8 items-center justify-center rounded-sm text-[0.65rem] font-semibold ${heatClass(hour.busyness)}`}
                   >
                     {hour.busyness}

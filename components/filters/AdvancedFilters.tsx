@@ -1,11 +1,14 @@
 'use client'
 
 import { SlidersHorizontal } from 'lucide-react'
+import { dayOptions, hourOptions } from '@/lib/venue-display'
 
 export type AdvancedFilterState = {
   radius: number
   minRating: number
   liveOnly: boolean
+  dayInt?: number
+  hour?: number
 }
 
 type AdvancedFiltersProps = {
@@ -25,6 +28,38 @@ export function AdvancedFilters({ value, onChange }: AdvancedFiltersProps) {
         <span className="hidden text-xs font-medium text-slate-500 group-open:inline">Hide</span>
       </summary>
       <div className="grid gap-4 border-t border-slate-100 p-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
+            Forecast day
+            <select
+              value={value.dayInt ?? ''}
+              onChange={event => onChange({ ...value, dayInt: event.target.value === '' ? undefined : Number(event.target.value) })}
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-teal-700"
+            >
+              <option value="">Any day</option>
+              {dayOptions.map(day => (
+                <option key={day.value} value={day.value}>
+                  {day.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-slate-700">
+            Forecast time
+            <select
+              value={value.hour ?? ''}
+              onChange={event => onChange({ ...value, hour: event.target.value === '' ? undefined : Number(event.target.value) })}
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-teal-700"
+            >
+              <option value="">Any time</option>
+              {hourOptions.map(hour => (
+                <option key={hour.value} value={hour.value}>
+                  {hour.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <label className="grid gap-2 text-sm font-medium text-slate-700">
           Search radius
           <select

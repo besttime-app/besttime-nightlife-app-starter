@@ -7,11 +7,12 @@ import { createVenueMarkerElement } from '@/components/map/MapMarker'
 
 type VenueMapProps = {
   venue: Venue
+  compact?: boolean
 }
 
 const mapStyle = 'https://tiles.openfreemap.org/styles/liberty'
 
-export function VenueMap({ venue }: VenueMapProps) {
+export function VenueMap({ compact = false, venue }: VenueMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
   const markerRef = useRef<Marker | null>(null)
@@ -89,7 +90,7 @@ export function VenueMap({ venue }: VenueMapProps) {
   }, [ready, venue])
 
   return (
-    <div className="relative h-[360px] min-h-[320px] w-full overflow-hidden rounded-md border border-slate-200 bg-slate-200 sm:h-[440px]">
+    <div className={`relative w-full overflow-hidden rounded-md border border-slate-200 bg-slate-200 ${compact ? 'h-[260px] min-h-[240px]' : 'h-[360px] min-h-[320px] sm:h-[440px]'}`}>
       <div ref={containerRef} className="h-full w-full" aria-label={`Map centered on ${venue.name}`} />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/70 to-transparent" />
     </div>

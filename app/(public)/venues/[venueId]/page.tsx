@@ -5,21 +5,16 @@ import { Activity, ArrowLeft, Clock3, Database, MapPin, Star } from 'lucide-reac
 import { Attribution } from '@/components/app/Attribution'
 import { VenueMap } from '@/components/map/VenueMap'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { getBusynessMetric, getRepresentativeVenueDay } from '@/components/venue/VenueDetailPanel'
+import { getBusynessMetric, getRepresentativeVenueDay, getVenueDayForDate } from '@/components/venue/VenueDetailPanel'
 import { VenueHeatmap } from '@/components/venue/VenueHeatmap'
 import { getFixtureVenueById, getFixtureVenueIds } from '@/lib/data/fixture-store'
 import { getVenueRepository } from '@/lib/data/repository'
 import { venueDetailPath, venueJsonLd } from '@/lib/seo'
 import type { Venue } from '@/lib/types'
+import { formatCompactHourLabel, formatHourLabel, getDayLabel, getForecastBusyness, getVenueTypeLabel } from '@/lib/venue-display'
 
 type VenuePageProps = {
   params: Promise<{ venueId: string }>
-}
-
-const hourLabel = (hour: number) => {
-  if (hour === 0) return '12 AM'
-  if (hour === 12) return '12 PM'
-  return hour > 12 ? `${hour - 12} PM` : `${hour} AM`
 }
 
 const formatReviews = (reviews?: number) => {
@@ -100,9 +95,15 @@ export default async function VenuePage({ params }: VenuePageProps) {
 
   const busynessMetric = getBusynessMetric(venue)
   const representativeDay = getRepresentativeVenueDay(venue)
-  const forecastPeak = representativeDay ? hourLabel(representativeDay.peakHour) : '-'
-  const quietForecast = representativeDay ? hourLabel(representativeDay.quietHour) : '-'
+  const currentDay = getVenueDayForDate(venue)
+  const currentHour = new Date().getHours()
+  const currentForecast = currentDay ? getForecastBusyness(venue, currentDay.dayInt, currentHour) : 0
+  const forecastPeak = representativeDay ? formatHourLabel(representativeDay.peakHour) : '-'
+  const quietForecast = representativeDay ? formatHourLabel(representativeDay.quietHour) : '-'
+  const currentDayPeak = currentDay ? formatHourLabel(currentDay.peakHour) : '-'
+  const currentDayQuiet = currentDay ? formatHourLabel(currentDay.quietHour) : '-'
   const bestTimeUrl = visibleBestTimeDataUrl(venue.bestTimeUrl)
+  const venueType = getVenueTypeLabel(venue)
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -122,7 +123,7 @@ export default async function VenuePage({ params }: VenuePageProps) {
                   {venue.liveStatus === 'available' ? 'Live signal' : 'Forecast'}
                 </span>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold capitalize text-slate-700">
-                  {venue.primaryCategory}
+                  {venueType}
                 </span>
               </div>
               <h1 className="mt-4 text-3xl font-semibold leading-tight text-slate-950 sm:text-4xl">
@@ -148,59 +149,99 @@ export default async function VenuePage({ params }: VenuePageProps) {
       </header>
 
       <section aria-labelledby="overview-heading" className="bg-slate-50 py-8">
-        <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6 lg:grid-cols-[1fr_20rem] lg:px-8">
-          <div>
-            <h2 id="overview-heading" className="text-xl font-semibold text-slate-950">
-              Venue overview
-            </h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mx-auto grid w-full max-w-6xl items-start gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:px-8">
+          <div className="grid gap-6 self-start">
+            <section className="self-start rounded-md border border-slate-200 bg-white p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 id="overview-heading" className="text-xl font-semibold text-slate-950">
+                    Current day forecast
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {currentDay ? `${getDayLabel(currentDay.dayInt)} by hour, with the current demo hour highlighted.` : 'Hourly forecast from the weekly BestTime profile.'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <MiniMetric label="Now" value={`${currentForecast}%`} />
+                  <MiniMetric label="Peak" value={currentDayPeak} />
+                  <MiniMetric label="Quiet" value={currentDayQuiet} />
+                </div>
+              </div>
+              {currentDay ? <CurrentDayTimeline day={currentDay} currentHour={currentHour} /> : null}
+            </section>
+
+            <section className="grid gap-3 sm:grid-cols-4" aria-label="Venue facts">
+              <InfoBox label="Venue type" value={venueType} />
               <InfoBox label="City" value={venue.city} />
               <InfoBox label="Price level" value={priceLabel(venue.priceLevel)} />
               <InfoBox label="Data source" value={venue.source === 'fixture' ? 'Demo forecast' : 'BestTime'} />
-            </div>
+            </section>
           </div>
 
-          <aside className="rounded-md border border-slate-200 bg-white p-4">
-            <div className="flex items-start gap-3">
-              <Database aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-teal-700" />
-              <div>
-                <h2 className="text-sm font-semibold text-slate-950">BestTime data</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Forecast and live foot traffic signals are powered by BestTime public venue data.
-                </p>
-                <a
-                  href={bestTimeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 inline-flex text-sm font-semibold text-slate-950 underline-offset-2 hover:underline"
-                >
-                  View BestTime data
-                </a>
+          <aside className="grid gap-4 self-start">
+            <section className="rounded-md border border-slate-200 bg-white p-4">
+              <div className="flex items-start gap-3">
+                <Database aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-teal-700" />
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-950">Live and forecast data</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Live signal shows current relative demand when available. Forecast shows expected traffic for this hour.
+                  </p>
+                </div>
               </div>
-            </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <MiniMetric label={busynessMetric.label} value={busynessMetric.value} />
+                <MiniMetric label="Forecast now" value={`${currentForecast}%`} />
+              </div>
+              <a
+                href={bestTimeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex text-sm font-semibold text-slate-950 underline-offset-2 hover:underline"
+              >
+                View BestTime data
+              </a>
+            </section>
+
+            <section className="rounded-md border border-slate-200 bg-white p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-slate-950">Venue map</h2>
+                <Attribution />
+              </div>
+              <VenueMap venue={venue} compact />
+            </section>
           </aside>
         </div>
       </section>
 
       <VenueHeatmap week={venue.week} />
-
-      <section aria-labelledby="map-heading" className="bg-slate-50 py-8">
-        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 id="map-heading" className="text-xl font-semibold text-slate-950">
-                Venue map
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Centered on {venue.name} with navigation controls and OpenFreeMap tiles.
-              </p>
-            </div>
-            <Attribution />
-          </div>
-          <VenueMap venue={venue} />
-        </div>
-      </section>
     </main>
+  )
+}
+
+function CurrentDayTimeline({ currentHour, day }: { currentHour: number; day: NonNullable<ReturnType<typeof getVenueDayForDate>> }) {
+  return (
+    <div className="mt-5 overflow-x-auto pb-2" role="region" aria-label={`${day.dayLabel} hourly forecast`}>
+      <div className="grid min-w-[680px] items-end gap-1" style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}>
+        {day.hours.map(hour => {
+          const isCurrentHour = hour.hour === currentHour
+          const height = Math.max(0.35, hour.busyness / 100)
+
+          return (
+            <div key={hour.hour} className="grid gap-2">
+              <div
+                className={`rounded-sm ${isCurrentHour ? 'bg-teal-700' : hour.busyness >= 70 ? 'bg-orange-500' : 'bg-slate-300'}`}
+                style={{ height: `${height * 7.5}rem` }}
+                title={`${formatHourLabel(hour.hour)}: ${hour.busyness}% busy`}
+              />
+              <div className={`text-center text-[0.62rem] font-semibold ${isCurrentHour ? 'text-teal-800' : 'text-slate-500'}`}>
+                {hour.hour % 3 === 0 ? formatCompactHourLabel(hour.hour) : ''}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -219,6 +260,15 @@ function InfoBox({ label, value }: { label: string; value: string }) {
     <div className="rounded-md border border-slate-200 bg-white p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-2 text-sm font-semibold text-slate-950">{value}</p>
+    </div>
+  )
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-slate-50 px-3 py-2">
+      <p className="text-lg font-semibold leading-none text-slate-950">{value}</p>
+      <p className="mt-1 text-[0.68rem] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
     </div>
   )
 }

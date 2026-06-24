@@ -29,6 +29,7 @@ export type Venue = {
   lng: number
   categories: VenueCategory[]
   primaryCategory: VenueCategory
+  venueType?: string
   rating?: number
   reviews?: number
   priceLevel?: number
@@ -49,6 +50,8 @@ export type VenueFilters = {
   lat?: number
   lng?: number
   radius?: number
+  dayInt?: number
+  hour?: number
 }
 
 export type AppMode = 'demo' | 'live'

@@ -80,6 +80,19 @@ test('desktop app shell renders map controls and category interactions', async (
 
   await expect(cafes).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('aside h2').filter({ hasText: cafeSmokeVenue.name })).toBeVisible()
+
+  await page.locator('summary:visible').filter({ hasText: 'Advanced filters' }).click()
+  const forecastDaySelect = page.locator('label:visible', { hasText: 'Forecast day' }).locator('select')
+  const forecastTimeSelect = page.locator('label:visible', { hasText: 'Forecast time' }).locator('select')
+  await forecastDaySelect.selectOption('5')
+  await Promise.all([
+    page.waitForResponse(response => {
+      const url = new URL(response.url())
+
+      return url.pathname === '/api/besttime/venues' && url.searchParams.get('dayInt') === '5' && url.searchParams.get('hour') === '22'
+    }),
+    forecastTimeSelect.selectOption('22')
+  ])
 })
 
 test('location modal can use browser coordinates for venue requests', async ({ context, page }, testInfo) => {

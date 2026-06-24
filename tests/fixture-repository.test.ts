@@ -88,6 +88,13 @@ describe('fixture store', () => {
     expect(new Set(fridayNightScores).size).toBeGreaterThan(1)
   })
 
+  it('sorts by selected forecast day and time when no quick filter is active', () => {
+    const venues = getFixtureVenues({ category: 'nightlife', dayInt: 5, hour: 22, limit: 4 })
+    const saturdayNightScores = venues.map(venue => venue.week[5].hours.find(hour => hour.hour === 22)?.busyness ?? 0)
+
+    expect(saturdayNightScores).toEqual([...saturdayNightScores].sort((a, b) => b - a))
+  })
+
   it('sorts quiet-spots by lower busyness', () => {
     const venues = getFixtureVenues({ category: 'nightlife', quickFilter: 'quiet-spots', limit: 3 })
     const scores = venues.map(venue => venue.busyness)

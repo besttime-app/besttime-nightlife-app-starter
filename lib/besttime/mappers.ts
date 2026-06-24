@@ -55,6 +55,9 @@ const normalizeCategories = (input: Record<string, unknown>, primaryCategory: Ve
   return [...categories]
 }
 
+const normalizeVenueType = (input: Record<string, unknown>, primaryCategory: VenueCategory) =>
+  getString(input, ['venue_type', 'type', 'venue_category', 'category'], primaryCategory)
+
 const isNumberArray = (value: unknown): value is number[] =>
   Array.isArray(value) && value.every(item => typeof item === 'number' || (typeof item === 'string' && Number.isFinite(Number(item))))
 
@@ -125,6 +128,7 @@ export const mapBestTimeVenue = (input: Record<string, unknown>): Venue => {
     lng: getNumber(input, ['venue_lng', 'venue_lon', 'lng', 'lon']) ?? -74.006,
     categories,
     primaryCategory,
+    venueType: normalizeVenueType(input, primaryCategory),
     rating: getNumber(input, ['rating']),
     reviews: getNumber(input, ['reviews']),
     priceLevel,

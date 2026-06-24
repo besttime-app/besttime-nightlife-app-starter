@@ -1,5 +1,6 @@
 import { allFixtureVenues } from '@/data/fixtures/nyc-nightlife'
 import type { Venue, VenueCategory, VenueDay, VenueFilters } from '@/lib/types'
+import { getForecastBusyness } from '@/lib/venue-display'
 
 const categoryMatches = (venue: Venue, category: VenueCategory) => {
   if (category === 'popular') return venue.categories.includes('popular') || (venue.reviews ?? 0) > 1000
@@ -32,6 +33,30 @@ const comparePopularityTiebreakers = (a: Venue, b: Venue) =>
 const compareQuietTiebreakers = (a: Venue, b: Venue) =>
   compareAsc(liveScore(a), liveScore(b)) || compareDesc(a.reviews ?? 0, b.reviews ?? 0) || compareByName(a, b)
 
+const forecastWindowScore = (venue: Venue, filters: Partial<VenueFilters>) => {
+  if (filters.dayInt === undefined && filters.hour === undefined) return undefined
+
+  if (filters.dayInt !== undefined && filters.hour !== undefined) {
+    return getForecastBusyness(venue, filters.dayInt, filters.hour)
+  }
+
+  if (filters.dayInt !== undefined) {
+    const day = venue.week.find(venueDay => venueDay.dayInt === filters.dayInt)
+    return day ? Math.max(...day.hours.map(hour => hour.busyness)) : 0
+  }
+
+  return Math.max(...venue.week.map(day => getForecastBusyness(venue, day.dayInt, filters.hour ?? 0)))
+}
+
+const forecastWindowSort = (venues: Venue[], filters: Partial<VenueFilters>) => {
+  const hasForecastWindow = filters.dayInt !== undefined || filters.hour !== undefined
+  if (!hasForecastWindow) return venues
+
+  return [...venues].sort((a, b) =>
+    compareDesc(forecastWindowScore(a, filters) ?? 0, forecastWindowScore(b, filters) ?? 0) || comparePopularityTiebreakers(a, b)
+  )
+}
+
 const quickFilterSort = (venues: Venue[], quickFilter: VenueFilters['quickFilter']) => {
   const sorted = [...venues]
 
@@ -40,7 +65,7 @@ const quickFilterSort = (venues: Venue[], quickFilter: VenueFilters['quickFilter
   if (quickFilter === 'quiet-spots') return sorted.sort((a, b) => compareAsc(a.busyness, b.busyness) || compareQuietTiebreakers(a, b))
   if (quickFilter === 'high-review') return sorted.sort((a, b) => compareDesc(a.reviews ?? 0, b.reviews ?? 0) || comparePopularityTiebreakers(a, b))
 
-  return sorted
+  return undefined
 }
 
 const distanceInMeters = (from: Pick<VenueFilters, 'lat' | 'lng'>, venue: Venue) => {
@@ -70,7 +95,9 @@ export const getFixtureVenues = (filters: Partial<VenueFilters> = {}): Venue[] =
   const limit = filters.limit || 24
   const matches = allFixtureVenues.filter(venue => categoryMatches(venue, category) && radiusMatches(venue, filters))
 
-  return quickFilterSort(matches, filters.quickFilter).slice(0, limit).map(cloneVenue)
+  const sortedMatches = quickFilterSort(matches, filters.quickFilter) ?? forecastWindowSort(matches, filters)
+
+  return sortedMatches.slice(0, limit).map(cloneVenue)
 }
 
 export const getFixtureVenueById = (venueId: string): Venue | undefined => {

@@ -89,6 +89,8 @@ describe('venue detail page route helpers', () => {
 
     expect(screen.getByText('Forecast peak')).toBeInTheDocument()
     expect(screen.getByText('Quiet forecast')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Current day forecast' })).toBeInTheDocument()
+    expect(screen.getByText('Venue type')).toBeInTheDocument()
     expect(screen.queryByText('Peak today')).not.toBeInTheDocument()
     expect(screen.queryByText('Quiet today')).not.toBeInTheDocument()
   })

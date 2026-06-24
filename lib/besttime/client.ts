@@ -126,6 +126,20 @@ const applyQuickFilter = (params: BestTimeParams, quickFilter: VenueFilters['qui
   }
 }
 
+const applyForecastWindow = (params: BestTimeParams, filters: Partial<VenueFilters>) => {
+  if (filters.dayInt === undefined && filters.hour === undefined) return
+
+  if (filters.dayInt !== undefined) params.day_int = filters.dayInt
+  if (filters.hour !== undefined) {
+    params.hour_min = filters.hour
+    params.hour_max = filters.hour
+  }
+
+  params.busy_conf = 'any'
+  params.order_by = 'day_rank_max,reviews'
+  params.order = 'asc,desc'
+}
+
 export const listBestTimeVenues = async (filters: Partial<VenueFilters> = {}) => {
   const category = filters.category || 'nightlife'
   const params: BestTimeParams = {
@@ -139,7 +153,11 @@ export const listBestTimeVenues = async (filters: Partial<VenueFilters> = {}) =>
     own_venues_only: false
   }
 
-  applyQuickFilter(params, filters.quickFilter)
+  if (filters.quickFilter) {
+    applyQuickFilter(params, filters.quickFilter)
+  } else {
+    applyForecastWindow(params, filters)
+  }
 
   const json = await requestBestTime('/venues/filter', params)
   const venues = typeof json === 'object' && json && 'venues' in json && Array.isArray(json.venues) ? json.venues : []
