@@ -304,6 +304,19 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
     </div>
   )
 
+  const mapLoadingOverlay = isLoading ? (
+    <div
+      aria-live="polite"
+      data-testid="map-loading-overlay"
+      className="pointer-events-none absolute inset-0 z-[9] grid place-items-center bg-slate-950/10 backdrop-blur-[1px]"
+    >
+      <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/95 px-4 py-2 text-sm font-semibold text-slate-800 shadow-[0_16px_38px_rgb(15_23_42/0.22)]">
+        <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-teal-700" />
+        <span>Refreshing venues</span>
+      </div>
+    </div>
+  ) : null
+
   const desktopNav = (
     <aside className="hidden border-r border-slate-200 bg-white md:flex md:flex-col md:items-center md:gap-4 md:px-3 md:py-4">
       <div className="grid h-11 w-11 place-items-center rounded-md bg-slate-950 text-base font-semibold text-white">
@@ -334,6 +347,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
         {desktopNav}
         <section className="relative min-h-0 min-w-0">
           <MapCanvas venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={selectVenue} />
+          {mapLoadingOverlay}
           <div className="pointer-events-none absolute left-4 top-4 z-10 w-[min(42rem,calc(100%-2rem))]">
             <div className="pointer-events-auto rounded-lg border border-white/70 bg-white/92 p-3 shadow-[var(--shadow-soft)] backdrop-blur">
               {filterPanel}
@@ -388,6 +402,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
           onMapInteract={handleMobileMapInteraction}
           onSelectVenue={selectVenue}
         />
+        {mapLoadingOverlay}
         <div className="pointer-events-none absolute left-0 right-[4.25rem] top-0 z-10 p-3">
           <div className="pointer-events-auto rounded-lg border border-white/70 bg-white/94 p-3 shadow-[var(--shadow-soft)] backdrop-blur">
             <div className="mb-3 flex items-center justify-between gap-3">

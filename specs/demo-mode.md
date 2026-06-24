@@ -19,6 +19,7 @@ The starter must work immediately without a BestTime API key so developers can e
 - Browser-location failures must explain whether permission is blocked, location is unavailable, or lookup timed out, and must keep retry plus NYC demo fallback available.
 - Demo map/API results should keep the default visible result limit modest so mobile browsers do not render all fixture markers at once.
 - Category and quick filters must work against the full fixture pool while returning a bounded result set.
+- Category, quick-filter, and advanced-filter refreshes must show a map-level loading overlay in addition to any sidebar spinner, so users can tell the map data is still updating.
 - Advanced filters may rank venues by selected forecast day and time. This ranking should use fixture forecast arrays in demo mode and `day_int` plus hour parameters in live mode.
 - Discovery-map venue dots should be rendered as map-native layers or equivalent map-synchronized primitives so pitch, bearing, and zoom cannot desynchronize them from the basemap.
 - When a visitor supplies a browser-stored private BestTime API key, live BestTime result detail links must use a client-side, noindex route that reads local storage and calls the starter API proxy with headers. Server-rendered `/venues/*` pages are reserved for fixture/known venue SEO pages because they cannot access browser local storage.

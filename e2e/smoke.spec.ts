@@ -129,6 +129,39 @@ test('location modal can use browser coordinates for venue requests', async ({ c
   await expect(page.getByRole('heading', { name: /BestTime venues near you/i })).toBeVisible()
 })
 
+test('map shows a loading overlay while venue filters refresh', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'desktop-only coverage')
+  await resetLocationChoice(page)
+  await page.goto('/')
+  await closeLocationModalWithDemoFallback(page)
+
+  let releasePopularResponse: (() => void) | undefined
+  const popularResponse = new Promise<void>(resolve => {
+    releasePopularResponse = resolve
+  })
+
+  await page.route('**/api/besttime/venues?**', async route => {
+    const url = new URL(route.request().url())
+    if (url.searchParams.get('category') !== 'popular') {
+      await route.continue()
+      return
+    }
+
+    await popularResponse
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ mode: 'demo', venues: [detailSmokeVenue] })
+    })
+  })
+
+  await page.getByRole('button', { name: 'Popular' }).click()
+  const mapLoadingOverlay = page.getByTestId('map-loading-overlay').first()
+  await expect(mapLoadingOverlay).toBeVisible()
+  await expect(mapLoadingOverlay.getByText('Refreshing venues')).toBeVisible()
+  releasePopularResponse?.()
+  await expect(mapLoadingOverlay).toBeHidden()
+})
+
 test('browser-key live results use client-side live detail links', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'desktop-only coverage')
   const liveVenue = {
