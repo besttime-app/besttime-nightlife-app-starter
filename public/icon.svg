@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="BestTime Nightlife Starter">
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+  <path d="M13 43c7.5-18 22.5-18 30 0" fill="none" stroke="#2dd4bf" stroke-width="5" stroke-linecap="round"/>
+  <path d="M27 43c4.5-10 13.5-10 18 0" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="23" cy="23" r="5" fill="#f8fafc"/>
+  <circle cx="43" cy="23" r="5" fill="#ef4444"/>
+</svg>

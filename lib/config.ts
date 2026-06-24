@@ -23,3 +23,5 @@ export const siteConfig = {
 }
 
 export const hasBestTimeApiKey = () => Boolean(process.env.BESTTIME_API_KEY?.trim())
+
+export const shouldIndexPublicPages = () => process.env.NEXT_PUBLIC_INDEX_PUBLIC_PAGES !== 'false'

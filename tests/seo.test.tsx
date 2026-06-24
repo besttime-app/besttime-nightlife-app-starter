@@ -1,8 +1,17 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { allFixtureVenues } from '@/data/fixtures/nyc-nightlife'
+import AboutDataPage, { metadata as aboutDataMetadata } from '@/app/(public)/about-data/page'
+import NewYorkNightlifePage, { metadata as cityMetadata } from '@/app/(public)/cities/new-york/nightlife/page'
+import manifest from '@/app/manifest'
+import robots from '@/app/robots'
+import sitemap from '@/app/sitemap'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { canonicalUrl, serializeJsonLd, venueJsonLd } from '@/lib/seo'
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 describe('seo helpers', () => {
   it('builds canonical URLs from the configured site URL', () => {
@@ -85,5 +94,78 @@ describe('seo helpers', () => {
     expect(serializeJsonLd({ text: '<>&\u2028\u2029' })).toBe(
       '{"text":"\\u003c\\u003e\\u0026\\u2028\\u2029"}'
     )
+  })
+})
+
+describe('public seo pages', () => {
+  it('renders the crawlable city page with fixture venue detail links', () => {
+    render(<NewYorkNightlifePage />)
+
+    expect(screen.getByRole('heading', { name: /new york nightlife foot traffic demo/i })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /lower east side cocktail room/i })[0]).toHaveAttribute(
+      'href',
+      '/venues/demo-nyc-bar-1'
+    )
+    expect(cityMetadata.alternates).toMatchObject({
+      canonical: 'http://localhost:3000/cities/new-york/nightlife'
+    })
+  })
+
+  it('renders about-data links to public BestTime resources', () => {
+    render(<AboutDataPage />)
+
+    expect(screen.getByRole('heading', { name: /about the foot traffic data/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'BestTime' })).toHaveAttribute('href', 'https://besttime.app')
+    expect(screen.getByRole('link', { name: 'docs' })).toHaveAttribute('href', 'https://besttime.app/api/v1/docs')
+    expect(screen.getByRole('link', { name: 'pricing' })).toHaveAttribute('href', 'https://besttime.app/pricing')
+    expect(aboutDataMetadata.alternates).toMatchObject({
+      canonical: 'http://localhost:3000/about-data'
+    })
+  })
+})
+
+describe('pwa and indexing routes', () => {
+  it('returns an installable manifest', () => {
+    expect(manifest()).toMatchObject({
+      name: 'BestTime Nightlife Starter',
+      short_name: 'Nightlife',
+      start_url: '/',
+      display: 'standalone',
+      icons: [
+        {
+          src: '/icon.svg',
+          sizes: 'any',
+          type: 'image/svg+xml'
+        }
+      ]
+    })
+  })
+
+  it('allows public indexing by default and can disable it by env', () => {
+    expect(robots()).toMatchObject({
+      rules: {
+        userAgent: '*',
+        allow: '/'
+      },
+      sitemap: 'http://localhost:3000/sitemap.xml'
+    })
+
+    vi.stubEnv('NEXT_PUBLIC_INDEX_PUBLIC_PAGES', 'false')
+
+    expect(robots()).toMatchObject({
+      rules: {
+        userAgent: '*',
+        disallow: '/'
+      }
+    })
+  })
+
+  it('includes static and fixture venue routes in the sitemap', () => {
+    const urls = sitemap().map(entry => entry.url)
+
+    expect(urls).toContain('http://localhost:3000/')
+    expect(urls).toContain('http://localhost:3000/cities/new-york/nightlife')
+    expect(urls).toContain('http://localhost:3000/about-data')
+    expect(urls).toContain('http://localhost:3000/venues/demo-nyc-bar-1')
   })
 })
