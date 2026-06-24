@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { allFixtureVenues } from '@/data/fixtures/nyc-nightlife'
 import { VenueCard } from '@/components/venue/VenueCard'
 import { getBusynessMetric, getRepresentativeVenueDay, getVenueDayForDate, VenueDetailPanel } from '@/components/venue/VenueDetailPanel'
+import { getVisibleHeatmapHours, VenueHeatmap } from '@/components/venue/VenueHeatmap'
 import type { Venue } from '@/lib/types'
 import { getVenueTypeLabel } from '@/lib/venue-display'
 
@@ -13,6 +14,18 @@ const makeLiveStyleVenue = (): Venue => ({
   slug: 'live-detail-slug',
   source: 'besttime'
 })
+
+const makeWeek = (activeHours: number[]) =>
+  Array.from({ length: 7 }, (_, dayInt) => ({
+    dayInt,
+    dayLabel: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][dayInt],
+    hours: Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      busyness: activeHours.includes(hour) ? 50 : 0
+    })),
+    peakHour: activeHours[0] ?? 0,
+    quietHour: 0
+  }))
 
 describe('venue detail links and metrics', () => {
   it('links venue cards by stable venue id instead of slug', () => {
@@ -90,5 +103,18 @@ describe('venue detail links and metrics', () => {
     expect(getVenueDayForDate(venue, new Date('2026-06-22T12:00:00Z'))).toBe(venue.week[0])
     expect(getVenueDayForDate(venue, new Date('2026-06-24T12:00:00Z'))).toBe(venue.week[2])
     expect(getVenueDayForDate(venue, new Date('2026-06-28T12:00:00Z'))).toBe(venue.week[6])
+  })
+
+  it('trims closed heatmap hours while preserving overnight venue windows', () => {
+    const week = makeWeek([17, 18, 19, 20, 21, 22, 23, 0, 1, 2])
+
+    expect(getVisibleHeatmapHours(week)).toEqual([16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3])
+
+    render(<VenueHeatmap week={week} />)
+
+    expect(screen.getByText('4p')).toBeInTheDocument()
+    expect(screen.getByText('3a')).toBeInTheDocument()
+    expect(screen.queryByText('9a')).not.toBeInTheDocument()
+    expect(screen.queryByText('12p')).not.toBeInTheDocument()
   })
 })
