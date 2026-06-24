@@ -13,7 +13,11 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 describe('seo helpers', () => {
+  const seoFixtureVenue = allFixtureVenues[0]
+
   it('builds canonical URLs from the configured site URL', () => {
     expect(canonicalUrl('/venues/lower-east-side-cocktail-room')).toBe(
       'http://localhost:3000/venues/lower-east-side-cocktail-room'
@@ -24,26 +28,26 @@ describe('seo helpers', () => {
   })
 
   it('returns LocalBusiness JSON-LD for venues with geo and rating', () => {
-    const schema = venueJsonLd(allFixtureVenues[0])
+    const schema = venueJsonLd(seoFixtureVenue)
 
     expect(schema).toMatchObject({
       '@context': 'https://schema.org',
-      '@type': ['LocalBusiness', 'BarOrPub'],
-      name: 'Lower East Side Cocktail Room',
-      address: '128 Ludlow St, New York, NY',
-      url: 'http://localhost:3000/venues/demo-nyc-bar-1',
+      '@type': expect.arrayContaining(['LocalBusiness']),
+      name: seoFixtureVenue.name,
+      address: seoFixtureVenue.address,
+      url: `http://localhost:3000/venues/${seoFixtureVenue.id}`,
       geo: {
         '@type': 'GeoCoordinates',
-        latitude: 40.7209,
-        longitude: -73.9872
+        latitude: seoFixtureVenue.lat,
+        longitude: seoFixtureVenue.lng
       },
       aggregateRating: {
         '@type': 'AggregateRating',
-        ratingValue: 4.6,
-        reviewCount: 1842
+        ratingValue: seoFixtureVenue.rating,
+        reviewCount: seoFixtureVenue.reviews
       }
     })
-    expect(schema).not.toHaveProperty('sameAs')
+    expect(schema).toMatchObject({ sameAs: 'https://besttime.app' })
   })
 
   it('keeps sameAs only for public website URLs', () => {
@@ -58,14 +62,14 @@ describe('seo helpers', () => {
   })
 
   it('renders JSON-LD as an application/ld+json script', () => {
-    const schema = venueJsonLd(allFixtureVenues[0])
+    const schema = venueJsonLd(seoFixtureVenue)
 
     render(<JsonLd data={schema} />)
 
     const script = screen.getByTestId('json-ld')
     expect(script).toHaveAttribute('type', 'application/ld+json')
     expect(JSON.parse(script.textContent || '{}')).toMatchObject({
-      name: 'Lower East Side Cocktail Room'
+      name: seoFixtureVenue.name
     })
   })
 
@@ -99,12 +103,15 @@ describe('seo helpers', () => {
 
 describe('public seo pages', () => {
   it('renders the crawlable city page with fixture venue detail links', () => {
+    const firstNightlifeVenue = allFixtureVenues.find(venue => venue.categories.some(category => category === 'nightlife'))
+    expect(firstNightlifeVenue).toBeTruthy()
+
     render(<NewYorkNightlifePage />)
 
     expect(screen.getByRole('heading', { name: /new york nightlife foot traffic demo/i })).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: /lower east side cocktail room/i })[0]).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: new RegExp(escapeRegExp(firstNightlifeVenue!.name), 'i') })[0]).toHaveAttribute(
       'href',
-      '/venues/demo-nyc-bar-1'
+      `/venues/${firstNightlifeVenue!.id}`
     )
     expect(cityMetadata.alternates).toMatchObject({
       canonical: 'http://localhost:3000/cities/new-york/nightlife'
@@ -162,10 +169,11 @@ describe('pwa and indexing routes', () => {
 
   it('includes static and fixture venue routes in the sitemap', () => {
     const urls = sitemap().map(entry => entry.url)
+    const firstFixtureUrl = `http://localhost:3000/venues/${allFixtureVenues[0].id}`
 
     expect(urls).toContain('http://localhost:3000/')
     expect(urls).toContain('http://localhost:3000/cities/new-york/nightlife')
     expect(urls).toContain('http://localhost:3000/about-data')
-    expect(urls).toContain('http://localhost:3000/venues/demo-nyc-bar-1')
+    expect(urls).toContain(firstFixtureUrl)
   })
 })

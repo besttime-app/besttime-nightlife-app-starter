@@ -60,7 +60,14 @@ describe('venue detail links and metrics', () => {
 
     expect(screen.getByText('Forecast peak')).toBeInTheDocument()
     expect(screen.queryByText('Peak today')).not.toBeInTheDocument()
-    expect(getRepresentativeVenueDay(venue)).toBe(venue.week[4])
+    const expectedDay = venue.week.reduce((bestDay, day) => {
+      const dayPeak = day.hours.find(hour => hour.hour === day.peakHour)?.busyness ?? 0
+      const bestPeak = bestDay.hours.find(hour => hour.hour === bestDay.peakHour)?.busyness ?? 0
+
+      return dayPeak > bestPeak ? day : bestDay
+    }, venue.week[0])
+
+    expect(getRepresentativeVenueDay(venue)).toBe(expectedDay)
   })
 
   it('maps the current weekday to the app Monday-first week array', () => {

@@ -15,12 +15,12 @@ afterEach(() => {
 })
 
 describe('venue detail page route helpers', () => {
-  it('generates static params for fixture ids and slugs', async () => {
+  it('generates static params for canonical fixture ids only', async () => {
     const params = await generateStaticParams()
     const venue = allFixtureVenues[0]
 
     expect(params).toContainEqual({ venueId: venue.id })
-    expect(params).toContainEqual({ venueId: venue.slug })
+    expect(params).not.toContainEqual({ venueId: venue.slug })
   })
 
   it('generates canonical metadata for slug URLs with the stable venue id', async () => {

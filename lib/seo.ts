@@ -50,10 +50,17 @@ const isPublicWebsiteUrl = (url: string) => {
   }
 }
 
+const venueSchemaTypes = (venue: Pick<Venue, 'primaryCategory'>): JsonLdValue[] => {
+  if (venue.primaryCategory === 'nightlife') return ['LocalBusiness', 'BarOrPub']
+  if (venue.primaryCategory === 'cafes') return ['LocalBusiness', 'CafeOrCoffeeShop']
+  if (venue.primaryCategory === 'shopping') return ['LocalBusiness', 'Store']
+  return ['LocalBusiness']
+}
+
 export const venueJsonLd = (venue: Venue): JsonLdData => {
   const schema: JsonLdData = {
     '@context': 'https://schema.org',
-    '@type': ['LocalBusiness', 'BarOrPub'],
+    '@type': venueSchemaTypes(venue),
     name: venue.name,
     description: venue.summary,
     address: venue.address,

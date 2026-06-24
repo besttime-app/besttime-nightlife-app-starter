@@ -1,4 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
+import { allFixtureVenues } from '../data/fixtures/nyc-nightlife'
+
+const detailSmokeVenue = allFixtureVenues[0]
+const citySmokeVenue = allFixtureVenues.find(venue => venue.categories.some(category => category === 'nightlife')) || allFixtureVenues[0]
+const cafeSmokeVenue = allFixtureVenues.find(venue => venue.categories.some(category => category === 'cafes')) || allFixtureVenues[0]
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 const resetLocationChoice = async (page: Page) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' })
@@ -73,7 +79,7 @@ test('desktop app shell renders map controls and category interactions', async (
   ])
 
   await expect(cafes).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.locator('aside h2').filter({ hasText: 'Nolita Espresso Counter' })).toBeVisible()
+  await expect(page.locator('aside h2').filter({ hasText: cafeSmokeVenue.name })).toBeVisible()
 })
 
 test('location modal can use browser coordinates for venue requests', async ({ context, page }, testInfo) => {
@@ -130,12 +136,12 @@ test('mobile filters and detail CTA remain reachable above navigation', async ({
 test('venue detail page renders forecast, attribution, and venue map', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'desktop route smoke coverage')
 
-  await page.goto('/venues/demo-nyc-bar-1')
+  await page.goto(`/venues/${detailSmokeVenue.id}`)
 
-  await expect(page.getByRole('heading', { name: 'Lower East Side Cocktail Room' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: detailSmokeVenue.name })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Weekly busyness forecast' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'View BestTime data' })).toHaveAttribute('href', 'https://besttime.app')
-  await expect(page.locator('[aria-label="Map centered on Lower East Side Cocktail Room"]')).toBeVisible()
+  await expect(page.locator(`[aria-label="Map centered on ${detailSmokeVenue.name}"]`)).toBeVisible()
 })
 
 test('admin warns when password is not configured', async ({ page }, testInfo) => {
@@ -154,7 +160,7 @@ test('seo pages expose crawlable venue and data-source links', async ({ page }, 
 
   await page.goto('/cities/new-york/nightlife')
   await expect(page.getByRole('heading', { name: 'New York nightlife foot traffic demo' })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Lower East Side Cocktail Room/ })).toHaveAttribute('href', '/venues/demo-nyc-bar-1')
+  await expect(page.getByRole('link', { name: new RegExp(escapeRegExp(citySmokeVenue.name)) })).toHaveAttribute('href', `/venues/${citySmokeVenue.id}`)
 
   await page.goto('/about-data')
   await expect(page.getByRole('heading', { name: 'About the foot traffic data' })).toBeVisible()

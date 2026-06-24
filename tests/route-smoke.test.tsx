@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import Home from '@/app/page'
+import { allFixtureVenues } from '@/data/fixtures/nyc-nightlife'
 import { getVenueRepository } from '@/lib/data/repository'
 import { GET as getVenues } from '@/app/api/besttime/venues/route'
 import { GET as getVenueDetail } from '@/app/api/besttime/venues/[venueId]/route'
@@ -40,7 +41,7 @@ describe('route data dependencies', () => {
 
   it('can load a fixture venue detail', async () => {
     const repository = getVenueRepository()
-    const venue = await repository.getVenue('demo-nyc-bar-1')
+    const venue = await repository.getVenue(allFixtureVenues[0].id)
 
     expect(venue?.week).toHaveLength(7)
   })
@@ -77,14 +78,15 @@ describe('route data dependencies', () => {
   })
 
   it('returns fixture venue detail through the detail route handler', async () => {
-    const request = new NextRequest('http://localhost/api/besttime/venues/demo-nyc-bar-1')
+    const fixtureVenue = allFixtureVenues[0]
+    const request = new NextRequest(`http://localhost/api/besttime/venues/${fixtureVenue.id}`)
 
-    const response = await getVenueDetail(request, { params: Promise.resolve({ venueId: 'demo-nyc-bar-1' }) })
+    const response = await getVenueDetail(request, { params: Promise.resolve({ venueId: fixtureVenue.id }) })
     const body = await response.json()
 
     expect(response.status).toBe(200)
     expect(body.mode).toBe('demo')
-    expect(body.venue.id).toBe('demo-nyc-bar-1')
+    expect(body.venue.id).toBe(fixtureVenue.id)
   })
 
   it('returns 404 for missing live venue route handler requests', async () => {

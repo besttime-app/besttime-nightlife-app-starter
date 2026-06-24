@@ -2,7 +2,7 @@
 
 A Vercel-ready Next.js starter for building consumer venue-discovery apps with [BestTime](https://besttime.app) foot traffic data.
 
-The app works immediately in demo mode with bundled New York nightlife fixture data. Add `BESTTIME_API_KEY` to switch to live BestTime API data through server-side proxy routes.
+The app works immediately in demo mode with bundled New York fixture data across nightlife, cafes, shopping, and popular venues. Add `BESTTIME_API_KEY` to switch to live BestTime API data through server-side proxy routes.
 
 ![BestTime Nightlife Starter map preview](public/screenshots/starter-map.svg)
 
@@ -31,7 +31,7 @@ Open `http://localhost:3000`.
 
 ## Demo Mode
 
-If `BESTTIME_API_KEY` is empty, the app uses bundled NYC fixture data and shows a demo data status.
+If `BESTTIME_API_KEY` is empty, the app uses bundled NYC fixture data and shows a demo data status. The fixture includes 1,000 real public venue forecasts generated from a read-only BestTime production slice: 250 primary venues each for cafes, nightlife, shopping, and popular discovery, with current live busyness values where available.
 
 ## Live BestTime Mode
 

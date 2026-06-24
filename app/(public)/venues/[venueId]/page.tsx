@@ -7,8 +7,7 @@ import { VenueMap } from '@/components/map/VenueMap'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { getBusynessMetric, getRepresentativeVenueDay } from '@/components/venue/VenueDetailPanel'
 import { VenueHeatmap } from '@/components/venue/VenueHeatmap'
-import { allFixtureVenues } from '@/data/fixtures/nyc-nightlife'
-import { getFixtureVenueById } from '@/lib/data/fixture-store'
+import { getFixtureVenueById, getFixtureVenueIds } from '@/lib/data/fixture-store'
 import { getVenueRepository } from '@/lib/data/repository'
 import { venueDetailPath, venueJsonLd } from '@/lib/seo'
 import type { Venue } from '@/lib/types'
@@ -61,14 +60,7 @@ const getVenueByRouteId = async (venueId: string) => {
 }
 
 export function generateStaticParams() {
-  const params = new Map<string, { venueId: string }>()
-
-  for (const venue of allFixtureVenues) {
-    params.set(venue.id, { venueId: venue.id })
-    params.set(venue.slug, { venueId: venue.slug })
-  }
-
-  return [...params.values()]
+  return getFixtureVenueIds().map(venueId => ({ venueId }))
 }
 
 export async function generateMetadata({ params }: VenuePageProps): Promise<Metadata> {
