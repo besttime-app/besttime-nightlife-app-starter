@@ -26,6 +26,8 @@ type LocationModalProps = {
   promptRequestKey?: number
 }
 
+const blockedLocationStatus = 'Location is blocked in this browser. In Arc, open the Site Control Center icon next to the URL, allow Location, then try again. If it still fails, enable Location Services for Arc in macOS.'
+
 const readStoredLocation = (): BrowserLocation | undefined => {
   const stored = window.localStorage.getItem(coordinatesStorageKey)
   if (!stored) return undefined
@@ -40,6 +42,18 @@ const readStoredLocation = (): BrowserLocation | undefined => {
 
 const getFocusableElements = (container: HTMLElement) =>
   Array.from(container.querySelectorAll<HTMLElement>(focusableSelector)).filter(element => element.offsetParent !== null)
+
+const queryGeolocationPermissionState = async (): Promise<PermissionState | undefined> => {
+  if (!navigator.permissions?.query) return undefined
+
+  try {
+    const permission = await navigator.permissions.query({ name: 'geolocation' })
+    return permission.state
+  } catch {
+    // Safari and some embedded browsers do not support querying geolocation permission.
+    return undefined
+  }
+}
 
 export function LocationModal({ onUseBrowserLocation, onUseDemo, promptRequestKey = 0 }: LocationModalProps) {
   const [open, setOpen] = useState(false)
@@ -99,10 +113,32 @@ export function LocationModal({ onUseBrowserLocation, onUseDemo, promptRequestKe
   useEffect(() => {
     if (!open) return
 
+    let cancelled = false
+
+    const inspectLocationPermission = async () => {
+      if (!navigator.geolocation) {
+        setStatus('Location is not available in this browser. NYC demo is ready.')
+        return
+      }
+
+      if (!window.isSecureContext) {
+        setStatus('Location requires HTTPS or localhost. Open the secure Vercel URL or continue with the NYC demo.')
+        return
+      }
+
+      const permissionState = await queryGeolocationPermissionState()
+      if (!cancelled && permissionState === 'denied') {
+        setStatus(blockedLocationStatus)
+      }
+    }
+
+    void inspectLocationPermission()
+
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     primaryActionRef.current?.focus()
 
     return () => {
+      cancelled = true
       const previousFocus = previousFocusRef.current
       if (previousFocus?.isConnected) previousFocus.focus()
       previousFocusRef.current = null
@@ -159,7 +195,7 @@ export function LocationModal({ onUseBrowserLocation, onUseDemo, promptRequestKe
 
   const geolocationErrorStatus = (error: GeolocationPositionError) => {
     if (error.code === error.PERMISSION_DENIED) {
-      return 'Location permission is blocked for this site. Allow Location in your browser site settings, then try again.'
+      return blockedLocationStatus
     }
 
     if (error.code === error.POSITION_UNAVAILABLE) {
@@ -184,17 +220,10 @@ export function LocationModal({ onUseBrowserLocation, onUseDemo, promptRequestKe
       return
     }
 
-    const permissions = navigator.permissions
-    if (permissions?.query) {
-      try {
-        const permission = await permissions.query({ name: 'geolocation' })
-        if (permission.state === 'denied') {
-          setStatus('Location permission is blocked for this site. Allow Location in your browser site settings, then try again.')
-          return
-        }
-      } catch {
-        // Safari and some embedded browsers do not support querying geolocation permission.
-      }
+    const permissionState = await queryGeolocationPermissionState()
+    if (permissionState === 'denied') {
+      setStatus(blockedLocationStatus)
+      return
     }
 
     setRequestingLocation(true)

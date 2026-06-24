@@ -71,15 +71,13 @@ afterEach(() => {
 })
 
 describe('location modal', () => {
-  it('explains when browser location permission is already blocked', async () => {
+  it('explains when browser location permission is already blocked before requesting coordinates', async () => {
     const { getCurrentPosition } = mockBrowserLocation({ permissionState: 'denied' })
 
     render(<LocationModal onUseBrowserLocation={vi.fn()} onUseDemo={vi.fn()} />)
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Use my location' }))
-
-    expect(await screen.findByText(/location permission is blocked/i)).toBeInTheDocument()
-    expect(screen.getByText(/browser site settings/i)).toBeInTheDocument()
+    expect(await screen.findByText(/location is blocked in this browser/i)).toBeInTheDocument()
+    expect(screen.getByText(/site control center/i)).toBeInTheDocument()
     expect(getCurrentPosition).not.toHaveBeenCalled()
   })
 
@@ -90,7 +88,7 @@ describe('location modal', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Use my location' }))
 
-    expect(await screen.findByText(/location permission is blocked/i)).toBeInTheDocument()
+    expect(await screen.findByText(/location is blocked in this browser/i)).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: 'Use my location' })).toBeEnabled())
   })
 
