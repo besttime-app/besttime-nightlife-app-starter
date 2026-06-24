@@ -79,6 +79,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
   const [quickFilter, setQuickFilter] = useState<VenueFilters['quickFilter']>()
   const [advanced, setAdvanced] = useState<AdvancedFilterState>(defaultAdvancedFilters)
   const [location, setLocation] = useState<LocationState>(demoLocation)
+  const [locationPromptKey, setLocationPromptKey] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const initialVenueSearchKeyRef = useRef(
@@ -102,6 +103,10 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
 
   const handleUseDemo = useCallback(() => {
     setLocation(demoLocation)
+  }, [])
+
+  const openLocationPrompt = useCallback(() => {
+    setLocationPromptKey(current => current + 1)
   }, [])
 
   useEffect(() => {
@@ -214,7 +219,17 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
                   BestTime venues {location.kind === 'browser' ? 'near you' : 'in New York'}
                 </h1>
               </div>
-              {isLoading ? <Loader2 aria-label="Loading venues" className="h-5 w-5 animate-spin text-slate-500" /> : null}
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={openLocationPrompt}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                >
+                  <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
+                  Change
+                </button>
+                {isLoading ? <Loader2 aria-label="Loading venues" className="h-5 w-5 animate-spin text-slate-500" /> : null}
+              </div>
             </div>
             {error ? <p className="mt-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
           </div>
@@ -236,10 +251,15 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
                 <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">{modeLabel}</p>
                 <h1 className="truncate text-base font-semibold text-slate-950">BestTime venues</h1>
               </div>
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+              <button
+                type="button"
+                onClick={openLocationPrompt}
+                aria-label="Change location"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 hover:text-slate-950"
+              >
                 <MapPin aria-hidden="true" className="h-3 w-3" />
                 {locationLabel}
-              </span>
+              </button>
             </div>
             <div className="grid gap-3">
               <CategoryChips value={category} onChange={setCategory} />
@@ -260,7 +280,11 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
         </section>
         <BottomNav />
       </div>
-      <LocationModal onUseBrowserLocation={handleUseBrowserLocation} onUseDemo={handleUseDemo} />
+      <LocationModal
+        onUseBrowserLocation={handleUseBrowserLocation}
+        onUseDemo={handleUseDemo}
+        promptRequestKey={locationPromptKey}
+      />
     </main>
   )
 }

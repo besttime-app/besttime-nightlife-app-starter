@@ -23,6 +23,7 @@ type BrowserLocation = {
 type LocationModalProps = {
   onUseBrowserLocation: (location: BrowserLocation) => void
   onUseDemo: () => void
+  promptRequestKey?: number
 }
 
 const readStoredLocation = (): BrowserLocation | undefined => {
@@ -40,7 +41,7 @@ const readStoredLocation = (): BrowserLocation | undefined => {
 const getFocusableElements = (container: HTMLElement) =>
   Array.from(container.querySelectorAll<HTMLElement>(focusableSelector)).filter(element => element.offsetParent !== null)
 
-export function LocationModal({ onUseBrowserLocation, onUseDemo }: LocationModalProps) {
+export function LocationModal({ onUseBrowserLocation, onUseDemo, promptRequestKey = 0 }: LocationModalProps) {
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<string>('Use your current area or start with the NYC demo venues.')
   const dialogRef = useRef<HTMLElement | null>(null)
@@ -69,6 +70,19 @@ export function LocationModal({ onUseBrowserLocation, onUseDemo }: LocationModal
       window.clearTimeout(timer)
     }
   }, [onUseBrowserLocation, onUseDemo])
+
+  useEffect(() => {
+    if (promptRequestKey === 0) return
+
+    const timer = window.setTimeout(() => {
+      setStatus('Switch to your current area or return to the NYC demo venues.')
+      setOpen(true)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [promptRequestKey])
 
   const saveChoice = useCallback((choice: LocationChoice, location?: BrowserLocation) => {
     window.localStorage.setItem(storageKey, choice)

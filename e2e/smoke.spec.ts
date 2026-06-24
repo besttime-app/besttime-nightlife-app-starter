@@ -1,9 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const resetLocationChoice = async (page: Page) => {
-  await page.addInitScript(() => {
-    window.localStorage.clear()
-  })
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.evaluate(() => window.localStorage.clear())
 }
 
 const closeLocationModalWithDemoFallback = async (page: Page) => {
@@ -61,6 +60,12 @@ test('desktop app shell renders map controls and category interactions', async (
   await page.waitForTimeout(250)
   expect(venueRequests).toHaveLength(0)
 
+  await page.reload()
+  await expect(page.getByRole('dialog', { name: 'Choose a starting location' })).toBeHidden()
+  await page.getByRole('button', { name: /change/i }).click()
+  await expect(page.getByRole('dialog', { name: 'Choose a starting location' })).toBeVisible()
+  await page.getByRole('button', { name: 'Explore NYC demo' }).click()
+
   const cafes = page.getByRole('button', { name: 'Cafes' }).first()
   await Promise.all([
     page.waitForResponse(response => response.url().includes('/api/besttime/venues') && response.url().includes('category=cafes')),
@@ -101,6 +106,9 @@ test('mobile filters and detail CTA remain reachable above navigation', async ({
   await closeLocationModalWithDemoFallback(page)
 
   await expect(page.locator('[aria-label="Venue map"]:visible')).toBeVisible()
+  await page.getByRole('button', { name: 'Change location' }).click()
+  await expect(page.getByRole('dialog', { name: 'Choose a starting location' })).toBeVisible()
+  await page.getByRole('button', { name: 'Explore NYC demo' }).click()
   await expect(page.locator('.maplibregl-ctrl-zoom-in:visible').first()).toBeVisible()
   await expect(page.locator('.maplibregl-ctrl-attrib:visible').first()).toBeVisible()
 
