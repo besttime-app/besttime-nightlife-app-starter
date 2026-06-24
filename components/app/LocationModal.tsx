@@ -44,6 +44,7 @@ const getFocusableElements = (container: HTMLElement) =>
 export function LocationModal({ onUseBrowserLocation, onUseDemo, promptRequestKey = 0 }: LocationModalProps) {
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<string>('Use your current area or start with the NYC demo venues.')
+  const [requestingLocation, setRequestingLocation] = useState(false)
   const dialogRef = useRef<HTMLElement | null>(null)
   const primaryActionRef = useRef<HTMLButtonElement | null>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
@@ -156,12 +157,47 @@ export function LocationModal({ onUseBrowserLocation, onUseDemo, promptRequestKe
     }
   }, [open, saveChoice])
 
-  const requestLocation = () => {
+  const geolocationErrorStatus = (error: GeolocationPositionError) => {
+    if (error.code === error.PERMISSION_DENIED) {
+      return 'Location permission is blocked for this site. Allow Location in your browser site settings, then try again.'
+    }
+
+    if (error.code === error.POSITION_UNAVAILABLE) {
+      return 'Your browser could not determine your location. Check location services or continue with the NYC demo.'
+    }
+
+    if (error.code === error.TIMEOUT) {
+      return 'Location lookup timed out. Move to a better signal, try again, or continue with the NYC demo.'
+    }
+
+    return 'Location was not shared. You can try again or continue with the NYC demo.'
+  }
+
+  const requestLocation = async () => {
     if (!navigator.geolocation) {
       setStatus('Location is not available in this browser. NYC demo is ready.')
       return
     }
 
+    if (!window.isSecureContext) {
+      setStatus('Location requires HTTPS or localhost. Open the secure Vercel URL or continue with the NYC demo.')
+      return
+    }
+
+    const permissions = navigator.permissions
+    if (permissions?.query) {
+      try {
+        const permission = await permissions.query({ name: 'geolocation' })
+        if (permission.state === 'denied') {
+          setStatus('Location permission is blocked for this site. Allow Location in your browser site settings, then try again.')
+          return
+        }
+      } catch {
+        // Safari and some embedded browsers do not support querying geolocation permission.
+      }
+    }
+
+    setRequestingLocation(true)
     setStatus('Requesting browser location...')
     navigator.geolocation.getCurrentPosition(
       position => {
@@ -173,7 +209,15 @@ export function LocationModal({ onUseBrowserLocation, onUseDemo, promptRequestKe
         onUseBrowserLocation(location)
         saveChoice('browser', location)
       },
-      () => setStatus('Location was not shared. You can continue with the NYC demo.')
+      error => {
+        setStatus(geolocationErrorStatus(error))
+        setRequestingLocation(false)
+      },
+      {
+        enableHighAccuracy: false,
+        maximumAge: 300000,
+        timeout: 12000
+      }
     )
   }
 
@@ -198,7 +242,7 @@ export function LocationModal({ onUseBrowserLocation, onUseDemo, promptRequestKe
               <h2 id="location-title" className="text-base font-semibold text-slate-950">
                 Choose a starting location
               </h2>
-              <p className="mt-1 text-sm leading-5 text-slate-600">{status}</p>
+              <p className="mt-1 text-sm leading-5 text-slate-600" aria-live="polite">{status}</p>
             </div>
           </div>
           <button
@@ -215,10 +259,11 @@ export function LocationModal({ onUseBrowserLocation, onUseDemo, promptRequestKe
             type="button"
             ref={primaryActionRef}
             onClick={requestLocation}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+            disabled={requestingLocation}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Navigation aria-hidden="true" className="h-4 w-4" />
-            Use my location
+            {requestingLocation ? 'Requesting...' : 'Use my location'}
           </button>
           <button
             type="button"
