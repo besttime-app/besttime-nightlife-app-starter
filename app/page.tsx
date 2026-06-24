@@ -1,12 +1,11 @@
 import { AppShell } from '@/components/app/AppShell'
-import { getVenueRepository } from '@/lib/data/repository'
-import { siteConfig } from '@/lib/config'
+import { hasBestTimeApiKey, siteConfig } from '@/lib/config'
+import { getFixtureVenues } from '@/lib/data/fixture-store'
 
 const defaultRadius = 1600
 
-export default async function Home() {
-  const repository = getVenueRepository()
-  const initialVenues = await repository.listVenues({
+export default function Home() {
+  const initialVenues = getFixtureVenues({
     category: siteConfig.defaultCategory,
     limit: siteConfig.defaultResultLimit,
     radius: defaultRadius
@@ -14,7 +13,7 @@ export default async function Home() {
 
   return (
     <AppShell
-      initialMode={repository.mode}
+      initialMode={hasBestTimeApiKey() ? 'live' : 'demo'}
       initialVenues={initialVenues}
       initialCategory={siteConfig.defaultCategory}
       resultLimit={siteConfig.defaultResultLimit}

@@ -89,7 +89,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
       resultLimit
     }).toString()
   )
-  const fetchedChangedStateRef = useRef(false)
+  const fetchedChangedStateRef = useRef(initialMode === 'live')
 
   const venueSearchKey = useMemo(
     () => buildVenueSearchParams({ advanced, category, location, quickFilter, resultLimit }).toString(),

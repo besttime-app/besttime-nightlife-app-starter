@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import Home from '@/app/page'
 import { getVenueRepository } from '@/lib/data/repository'
 import { GET as getVenues } from '@/app/api/besttime/venues/route'
 import { GET as getVenueDetail } from '@/app/api/besttime/venues/[venueId]/route'
@@ -23,6 +24,18 @@ describe('route data dependencies', () => {
 
     expect(venues).toHaveLength(4)
     expect(repository.mode).toBe('demo')
+  })
+
+  it('seeds the home route from fixtures during live-mode builds', () => {
+    vi.stubEnv('BESTTIME_API_KEY', 'pri_build_secret')
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const element = Home()
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(element.props.initialMode).toBe('live')
+    expect(element.props.initialVenues[0].source).toBe('fixture')
   })
 
   it('can load a fixture venue detail', async () => {

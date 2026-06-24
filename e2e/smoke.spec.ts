@@ -118,3 +118,38 @@ test('mobile filters and detail CTA remain reachable above navigation', async ({
   expect(navBox).not.toBeNull()
   expect(detailBox!.y + detailBox!.height).toBeLessThanOrEqual(navBox!.y)
 })
+
+test('venue detail page renders forecast, attribution, and venue map', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'desktop route smoke coverage')
+
+  await page.goto('/venues/demo-nyc-bar-1')
+
+  await expect(page.getByRole('heading', { name: 'Lower East Side Cocktail Room' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Weekly busyness forecast' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'View BestTime data' })).toHaveAttribute('href', 'https://besttime.app')
+  await expect(page.locator('[aria-label="Map centered on Lower East Side Cocktail Room"]')).toBeVisible()
+})
+
+test('admin warns when password is not configured', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'desktop route smoke coverage')
+
+  await page.goto('/admin')
+
+  await expect(page.getByRole('dialog', { name: 'Admin is unprotected' })).toBeVisible()
+  await expect(page.getByText(/ADMIN_PASSWORD/).first()).toBeVisible()
+  await page.getByRole('button', { name: 'I understand' }).click()
+  await expect(page.getByRole('heading', { name: 'Starter admin' })).toBeVisible()
+})
+
+test('seo pages expose crawlable venue and data-source links', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'desktop route smoke coverage')
+
+  await page.goto('/cities/new-york/nightlife')
+  await expect(page.getByRole('heading', { name: 'New York nightlife foot traffic demo' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Lower East Side Cocktail Room/ })).toHaveAttribute('href', '/venues/demo-nyc-bar-1')
+
+  await page.goto('/about-data')
+  await expect(page.getByRole('heading', { name: 'About the foot traffic data' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'BestTime' })).toHaveAttribute('href', 'https://besttime.app')
+  await expect(page.getByRole('link', { name: 'docs' })).toHaveAttribute('href', 'https://besttime.app/api/v1/docs')
+})
