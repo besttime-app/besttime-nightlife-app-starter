@@ -2,7 +2,7 @@
 
 A Vercel-ready Next.js starter for building consumer venue-discovery apps with [BestTime](https://besttime.app) foot traffic data.
 
-The app works immediately in demo mode with bundled New York fixture data across nightlife, cafes, shopping, and popular venues. Add `BESTTIME_API_KEY` to switch to live BestTime API data through server-side proxy routes.
+The app works immediately in demo mode with bundled New York fixture data across nightlife, cafes, shopping, and popular venues. Add `BESTTIME_API_KEY` to switch to live BestTime API data through server-side proxy routes, and add `BESTTIME_PUBLIC_API_KEY` to hydrate public forecast detail endpoints such as split weekly heatmaps.
 
 ![BestTime Nightlife Starter map preview](public/screenshots/starter-map.svg)
 
@@ -35,10 +35,11 @@ If `BESTTIME_API_KEY` is empty, the app uses bundled NYC fixture data and shows 
 
 ## Live BestTime Mode
 
-Add your private BestTime key to `.env.local`:
+Add your private BestTime key to `.env.local`. Add the public key too if you want live venue detail pages to use the split seven-day forecast endpoint for weekly heatmaps:
 
 ```dotenv
 BESTTIME_API_KEY=pri_your_key_here
+BESTTIME_PUBLIC_API_KEY=pub_your_key_here
 ```
 
 Restart the dev server. The browser still only calls local `/api/besttime/*` routes. The private key stays on the server.
@@ -48,7 +49,7 @@ You can also test the public Vercel demo before installing the starter:
 1. Open the map.
 2. Click **API keys**.
 3. Paste your BestTime private key for live venue filtering.
-4. Optionally paste your public key for public venue/forecast endpoints as the starter expands.
+4. Paste your public key too when testing live venue detail weekly heatmaps.
 
 The browser demo stores those values in `localStorage` and sends them as headers to this app's `/api/besttime/*` proxy. This is useful for testing your own subscription on the hosted demo, but production forks should use `BESTTIME_API_KEY` in server env instead of browser storage.
 
@@ -64,13 +65,15 @@ ADMIN_PASSWORD=choose-a-password
 
 1. Import this repository into Vercel.
 2. Set `BESTTIME_API_KEY` in Vercel Project Settings if you want live data.
-3. Set `ADMIN_PASSWORD` before sharing the deployment.
-4. Deploy.
+3. Set `BESTTIME_PUBLIC_API_KEY` if you want live detail pages to hydrate split weekly forecast heatmaps.
+4. Set `ADMIN_PASSWORD` before sharing the deployment.
+5. Deploy.
 
 CLI option:
 
 ```bash
 npx vercel env add BESTTIME_API_KEY production
+npx vercel env add BESTTIME_PUBLIC_API_KEY production
 npx vercel env add ADMIN_PASSWORD production
 npx vercel deploy --prod
 ```

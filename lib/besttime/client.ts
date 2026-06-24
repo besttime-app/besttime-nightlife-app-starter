@@ -7,6 +7,7 @@ import { BestTimeError, redactPrivateKey } from './errors'
 import { mapBestTimeVenue } from './mappers'
 
 type BestTimeParams = Record<string, string | number | boolean | undefined>
+type BestTimeAuthMode = 'private' | 'public'
 
 const nycDefaults = {
   lat: 40.72,
@@ -49,17 +50,30 @@ export const requestBestTime = async (
   path: string,
   params: BestTimeParams = {},
   init: RequestInit = {},
-  credentials: BestTimeCredentials = {}
+  credentials: BestTimeCredentials = {},
+  authMode: BestTimeAuthMode = 'private'
 ) => {
   const normalizedCredentials = normalizeBestTimeCredentials(credentials)
-  const apiKey = normalizedCredentials.privateKey || process.env.BESTTIME_API_KEY?.trim()
-  const redactionSecrets = bestTimeCredentialSecrets(normalizedCredentials, process.env.BESTTIME_API_KEY)
-  if (!apiKey) throw new BestTimeError('BESTTIME_API_KEY is not configured')
+  const apiKey = authMode === 'public'
+    ? normalizedCredentials.publicKey || process.env.BESTTIME_PUBLIC_API_KEY?.trim()
+    : normalizedCredentials.privateKey || process.env.BESTTIME_API_KEY?.trim()
+  const redactionSecrets = bestTimeCredentialSecrets(
+    normalizedCredentials,
+    process.env.BESTTIME_API_KEY,
+    process.env.BESTTIME_PUBLIC_API_KEY
+  )
+  if (!apiKey) {
+    throw new BestTimeError(
+      authMode === 'public'
+        ? 'BESTTIME_PUBLIC_API_KEY is not configured'
+        : 'BESTTIME_API_KEY is not configured'
+    )
+  }
 
   const url = buildBestTimeUrl(path)
   appendParams(url, {
     ...params,
-    api_key_private: apiKey
+    [authMode === 'public' ? 'api_key_public' : 'api_key_private']: apiKey
   })
 
   let response: Response
@@ -178,5 +192,28 @@ export const getBestTimeVenue = async (venueId: string, credentials: BestTimeCre
         ? json.venue_info
         : json
 
-  return mapBestTimeVenue((venue || {}) as Record<string, unknown>)
+  const venueRecord = (venue || {}) as Record<string, unknown>
+  const normalizedCredentials = normalizeBestTimeCredentials(credentials)
+  const hasPublicKey = Boolean(normalizedCredentials.publicKey || process.env.BESTTIME_PUBLIC_API_KEY?.trim())
+
+  if (!hasPublicKey) return mapBestTimeVenue(venueRecord)
+
+  try {
+    const weekJson = await requestBestTime(
+      '/forecasts/week/raw2',
+      { venue_id: venueId },
+      {},
+      normalizedCredentials,
+      'public'
+    )
+    const weekRecord = typeof weekJson === 'object' && weekJson ? weekJson as Record<string, unknown> : {}
+
+    return mapBestTimeVenue({
+      ...venueRecord,
+      analysis: weekRecord.analysis
+    })
+  } catch (error) {
+    if (error instanceof BestTimeError) return mapBestTimeVenue(venueRecord)
+    throw error
+  }
 }

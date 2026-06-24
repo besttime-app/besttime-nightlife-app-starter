@@ -61,6 +61,9 @@ const normalizeVenueType = (input: Record<string, unknown>, primaryCategory: Ven
 const isNumberArray = (value: unknown): value is number[] =>
   Array.isArray(value) && value.every(item => typeof item === 'number' || (typeof item === 'string' && Number.isFinite(Number(item))))
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
 const toDayProfile = (value: unknown): number[] | undefined => {
   if (isNumberArray(value)) return value.map(Number).slice(0, 24)
 
@@ -81,7 +84,7 @@ const normalizeDayProfile = (input: Record<string, unknown>): number[] => {
   return profile.slice(0, 24)
 }
 
-const buildStarterDayFromSingleBestTimeProfile = (profile: number[], dayInt: number): VenueDay => {
+const buildVenueDayFromProfile = (profile: number[], dayInt: number, dayLabel: string): VenueDay => {
   const hours: VenueHour[] = profile.map((busyness, index) => ({
     hour: (index + 6) % 24,
     busyness: clampBusyness(busyness)
@@ -91,15 +94,69 @@ const buildStarterDayFromSingleBestTimeProfile = (profile: number[], dayInt: num
 
   return {
     dayInt,
-    dayLabel: `Starter ${dayLabels[dayInt]} (single-day normalized)`,
+    dayLabel,
     hours,
     peakHour: peak.hour,
     quietHour: quiet.hour
   }
 }
 
+const buildStarterDayFromSingleBestTimeProfile = (profile: number[], dayInt: number): VenueDay =>
+  buildVenueDayFromProfile(profile, dayInt, `Starter ${dayLabels[dayInt]} (single-day normalized)`)
+
 const buildStarterWeekFromSingleBestTimeDay = (profile: number[]): VenueDay[] =>
   dayLabels.map((_, dayInt) => buildStarterDayFromSingleBestTimeProfile(profile, dayInt))
+
+const getNestedValue = (input: Record<string, unknown>, path: string[]) =>
+  path.reduce<unknown>((current, key) => (isRecord(current) ? current[key] : undefined), input)
+
+const getSplitWeekRaw = (input: Record<string, unknown>) =>
+  getNestedValue(input, ['analysis', 'week_raw']) ?? input.week_raw
+
+const normalizeWeekProfile = (value: unknown): number[] | undefined => {
+  const profile = toDayProfile(value)
+  if (!profile) return undefined
+
+  const normalized = profile.map(value => clampBusyness(Number(value)))
+  while (normalized.length < 24) normalized.push(0)
+
+  return normalized.slice(0, 24)
+}
+
+const getWeekDayInt = (value: unknown, fallback: number) => {
+  if (!isRecord(value)) return fallback
+  const dayInt = getNumber(value, ['day_int', 'dayInt'])
+
+  return dayInt !== undefined && dayInt >= 0 && dayInt <= 6 ? Math.trunc(dayInt) : fallback
+}
+
+const buildWeekFromSplitBestTimeRaw = (input: Record<string, unknown>): VenueDay[] | undefined => {
+  const rawWeek = getSplitWeekRaw(input)
+  if (!Array.isArray(rawWeek)) return undefined
+
+  const dayProfiles = new Map<number, number[]>()
+
+  if (rawWeek.length === 168 && isNumberArray(rawWeek)) {
+    for (let dayInt = 0; dayInt < 7; dayInt += 1) {
+      dayProfiles.set(dayInt, normalizeWeekProfile(rawWeek.slice(dayInt * 24, dayInt * 24 + 24)) || [])
+    }
+  } else {
+    rawWeek.forEach((item, index) => {
+      const dayInt = getWeekDayInt(item, index)
+      const profile = normalizeWeekProfile(isRecord(item) ? item.day_raw : item)
+      if (profile) dayProfiles.set(dayInt, profile)
+    })
+  }
+
+  if (dayProfiles.size < 7) return undefined
+
+  return dayLabels.map((dayLabel, dayInt) => {
+    const profile = dayProfiles.get(dayInt)
+    if (!profile) return undefined
+
+    return buildVenueDayFromProfile(profile, dayInt, dayLabel)
+  }).filter(Boolean) as VenueDay[]
+}
 
 const averageBusyness = (profile: number[]) =>
   clampBusyness(profile.reduce((total, value) => total + value, 0) / Math.max(profile.length, 1))
@@ -111,7 +168,7 @@ export const mapBestTimeVenue = (input: Record<string, unknown>): Venue => {
   const primaryCategory = normalizeCategory(input)
   const categories = normalizeCategories(input, primaryCategory)
   const profile = normalizeDayProfile(input)
-  const week = buildStarterWeekFromSingleBestTimeDay(profile)
+  const week = buildWeekFromSplitBestTimeRaw(input) || buildStarterWeekFromSingleBestTimeDay(profile)
   const liveBusyness = getNumber(input, ['venue_foot_traffic_live', 'live_busyness', 'liveBusyness'])
   const priceLevel = getNumber(input, ['price_level', 'priceLevel'])
   const busyness = getNumber(input, ['busyness', 'day_mean']) ?? averageBusyness(profile)

@@ -18,8 +18,12 @@ export const normalizeBestTimeCredentials = (credentials: BestTimeCredentials = 
 export const hasPrivateBestTimeCredential = (credentials: BestTimeCredentials = {}) =>
   Boolean(normalizeBestTimeCredentials(credentials).privateKey)
 
-export const bestTimeCredentialSecrets = (credentials: BestTimeCredentials = {}, envPrivateKey?: string) => {
+export const bestTimeCredentialSecrets = (
+  credentials: BestTimeCredentials = {},
+  envPrivateKey?: string,
+  envPublicKey?: string
+) => {
   const normalized = normalizeBestTimeCredentials(credentials)
 
-  return [normalized.privateKey, normalized.publicKey, envPrivateKey?.trim()].filter(Boolean) as string[]
+  return [normalized.privateKey, normalized.publicKey, envPrivateKey?.trim(), envPublicKey?.trim()].filter(Boolean) as string[]
 }

@@ -85,6 +85,28 @@ describe('BestTime mapping and repository', () => {
     expect(venue.week[6].hours[23]).toEqual({ hour: 5, busyness: 23 })
   })
 
+  it('maps split BestTime week_raw responses without cloning one day across the heatmap', () => {
+    const venue = mapBestTimeVenue({
+      venue_id: 'ven_week_raw',
+      venue_name: 'Week Raw Bar',
+      venue_type: 'BAR',
+      analysis: {
+        week_raw: Array.from({ length: 7 }, (_, dayInt) => ({
+          day_int: dayInt,
+          day_raw: Array.from({ length: 24 }, (_, hourIndex) => dayInt * 10 + hourIndex)
+        }))
+      }
+    })
+
+    expect(venue.week).toHaveLength(7)
+    expect(venue.week[0].dayLabel).toBe('Monday')
+    expect(venue.week[5].dayLabel).toBe('Saturday')
+    expect(venue.week[0].hours[0]).toEqual({ hour: 6, busyness: 0 })
+    expect(venue.week[5].hours[0]).toEqual({ hour: 6, busyness: 50 })
+    expect(venue.week[6].hours[23]).toEqual({ hour: 5, busyness: 83 })
+    expect(venue.week[0].hours).not.toEqual(venue.week[5].hours)
+  })
+
   it('maps BestTime venue_info detail responses', async () => {
     vi.stubEnv('BESTTIME_API_KEY', 'pri_detail_secret')
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
@@ -105,6 +127,75 @@ describe('BestTime mapping and repository', () => {
       name: 'Venue Info Bar',
       address: '55 Detail St, New York, NY'
     })
+  })
+
+  it('hydrates BestTime venue details with split weekly forecast data when a public key is available', async () => {
+    vi.stubEnv('BESTTIME_API_KEY', 'pri_detail_secret')
+    const requestedUrls: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      requestedUrls.push(url)
+
+      if (url.includes('/forecasts/week/raw2')) {
+        return new Response(JSON.stringify({
+          status: 'OK',
+          analysis: {
+            week_raw: Array.from({ length: 7 }, (_, dayInt) => ({
+              day_int: dayInt,
+              day_raw: Array.from({ length: 24 }, (_, hourIndex) => dayInt * 10 + hourIndex)
+            }))
+          }
+        }))
+      }
+
+      return new Response(JSON.stringify({
+        status: 'OK',
+        venue_info: {
+          venue_id: 'ven_detail_week',
+          venue_name: 'Venue Week Bar',
+          venue_address: '77 Week St, New York, NY',
+          venue_type: 'BAR',
+          day_raw_whole: Array.from({ length: 24 }, () => 5)
+        }
+      }))
+    }))
+
+    const venue = await getBestTimeVenue('ven_detail_week', { publicKey: 'pub_detail_secret' })
+
+    expect(requestedUrls).toHaveLength(2)
+    expect(requestedUrls[1]).toContain('/forecasts/week/raw2')
+    expect(requestedUrls[1]).toContain('api_key_public=pub_detail_secret')
+    expect(venue.week[0].dayLabel).toBe('Monday')
+    expect(venue.week[5].hours[0]).toEqual({ hour: 6, busyness: 50 })
+    expect(venue.week[0].hours).not.toEqual(venue.week[5].hours)
+  })
+
+  it('keeps live venue details available when public weekly forecast hydration fails', async () => {
+    vi.stubEnv('BESTTIME_API_KEY', 'pri_detail_secret')
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/forecasts/week/raw2')) {
+        return new Response(JSON.stringify({ status: 'error', message: 'Public key rejected' }), { status: 403 })
+      }
+
+      return new Response(JSON.stringify({
+        status: 'OK',
+        venue_info: {
+          venue_id: 'ven_detail_fallback',
+          venue_name: 'Venue Fallback Bar',
+          venue_address: '88 Fallback St, New York, NY',
+          venue_type: 'BAR',
+          day_raw_whole: Array.from({ length: 24 }, (_, index) => index)
+        }
+      }))
+    }))
+
+    const venue = await getBestTimeVenue('ven_detail_fallback', { publicKey: 'pub_rejected_secret' })
+
+    expect(venue.name).toBe('Venue Fallback Bar')
+    expect(venue.week[0].dayLabel).toBe('Starter Monday (single-day normalized)')
+    expect(venue.week[6].hours[23]).toEqual({ hour: 5, busyness: 23 })
   })
 
   it('preserves the API base path and keeps private keys out of mapped venues', async () => {

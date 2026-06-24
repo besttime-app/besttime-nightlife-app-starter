@@ -44,7 +44,10 @@ const getErrorStatus = (error: unknown) => {
 
 const getErrorMessage = (error: unknown, credentials: BestTimeCredentials) => {
   const message = error instanceof Error ? error.message : 'Unable to load venues'
-  const redacted = redactPrivateKey(message, bestTimeCredentialSecrets(credentials, process.env.BESTTIME_API_KEY))
+  const redacted = redactPrivateKey(
+    message,
+    bestTimeCredentialSecrets(credentials, process.env.BESTTIME_API_KEY, process.env.BESTTIME_PUBLIC_API_KEY)
+  )
 
   return typeof redacted === 'string' ? redacted : 'Unable to load venues'
 }
