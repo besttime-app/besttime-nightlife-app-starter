@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="BestTime Nightlife Starter map preview">
+  <rect width="1200" height="630" fill="#f8fafc"/>
+  <rect x="56" y="56" width="286" height="518" rx="12" fill="#0f172a"/>
+  <rect x="374" y="56" width="770" height="518" rx="12" fill="#dbe7e4"/>
+  <path d="M374 210c150-70 260 40 390-22 122-58 220-20 380 56" fill="none" stroke="#b7cbc6" stroke-width="26"/>
+  <path d="M374 420c126-54 246-22 348-80 136-78 252-68 422 18" fill="none" stroke="#c7d6d2" stroke-width="22"/>
+  <circle cx="724" cy="292" r="17" fill="#ef4444" stroke="#fff" stroke-width="6"/>
+  <circle cx="836" cy="356" r="17" fill="#f59e0b" stroke="#fff" stroke-width="6"/>
+  <circle cx="682" cy="402" r="17" fill="#14b8a6" stroke="#fff" stroke-width="6"/>
+  <circle cx="942" cy="258" r="17" fill="#ef4444" stroke="#fff" stroke-width="6"/>
+  <rect x="92" y="96" width="186" height="20" rx="10" fill="#2dd4bf"/>
+  <text x="92" y="164" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#fff">Nightlife Starter</text>
+  <text x="92" y="214" font-family="Arial, sans-serif" font-size="19" fill="#cbd5e1">Powered by BestTime</text>
+  <rect x="92" y="286" width="196" height="54" rx="8" fill="#1e293b"/>
+  <rect x="92" y="360" width="196" height="54" rx="8" fill="#1e293b"/>
+  <rect x="92" y="434" width="196" height="54" rx="8" fill="#1e293b"/>
+</svg>
