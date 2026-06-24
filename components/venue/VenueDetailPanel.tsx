@@ -4,6 +4,7 @@ import type { Venue, VenueDay } from '@/lib/types'
 import { formatHourLabel, getVenueTypeLabel } from '@/lib/venue-display'
 
 type VenueDetailPanelProps = {
+  detailHref?: string
   venue?: Venue
   highlight?: boolean
 }
@@ -31,7 +32,7 @@ export const getBusynessMetric = (venue: Venue) => {
   }
 }
 
-export function VenueDetailPanel({ highlight = false, venue }: VenueDetailPanelProps) {
+export function VenueDetailPanel({ detailHref, highlight = false, venue }: VenueDetailPanelProps) {
   if (!venue) {
     return (
       <section className="rounded-md border border-slate-200 bg-white p-4">
@@ -90,7 +91,7 @@ export function VenueDetailPanel({ highlight = false, venue }: VenueDetailPanelP
           {venue.liveStatus === 'available' ? 'Live signal available' : 'Forecast data'}
         </span>
         <Link
-          href={`/venues/${encodeURIComponent(venue.id)}`}
+          href={detailHref || `/venues/${encodeURIComponent(venue.id)}`}
           className="inline-flex min-h-9 items-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
           Details

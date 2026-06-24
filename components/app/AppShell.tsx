@@ -107,11 +107,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
   const [category, setCategory] = useState<VenueCategory>(initialCategory)
   const [quickFilter, setQuickFilter] = useState<VenueFilters['quickFilter']>()
   const [advanced, setAdvanced] = useState<AdvancedFilterState>(defaultAdvancedFilters)
-  const [browserApiKeys, setBrowserApiKeys] = useState<BrowserBestTimeApiKeys>(() => (
-    typeof window === 'undefined'
-      ? {}
-      : parseStoredBrowserApiKeys(window.localStorage.getItem(browserApiKeysStorageKey))
-  ))
+  const [browserApiKeys, setBrowserApiKeys] = useState<BrowserBestTimeApiKeys>({})
   const [browserApiKeyVersion, setBrowserApiKeyVersion] = useState(0)
   const [location, setLocation] = useState<LocationState>(demoLocation)
   const [locationPromptKey, setLocationPromptKey] = useState(0)
@@ -132,6 +128,22 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
   )
   const fetchedChangedStateRef = useRef(initialMode === 'live')
   const browserPrivateKeyEnabled = hasBrowserPrivateKey(browserApiKeys)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const storedKeys = parseStoredBrowserApiKeys(window.localStorage.getItem(browserApiKeysStorageKey))
+      const normalizedKeys = normalizeBrowserApiKeys(storedKeys)
+      if (!normalizedKeys.privateKey && !normalizedKeys.publicKey) return
+
+      fetchedChangedStateRef.current = true
+      setBrowserApiKeys(normalizedKeys)
+      setBrowserApiKeyVersion(current => current + 1)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [])
 
   const venueSearchKey = useMemo(
     () => buildVenueSearchParams({ advanced, category, location, quickFilter, resultLimit }).toString(),
@@ -269,6 +281,11 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
   const selectedVenue = visibleVenues.find(venue => venue.id === selectedVenueId) ?? visibleVenues[0]
   const effectiveSelectedVenueId = selectedVenue?.id
   const selectedVenueBusyness = selectedVenue ? getBusynessMetric(selectedVenue) : undefined
+  const getDetailHref = useCallback((venue: Venue) => (
+    browserPrivateKeyEnabled && mode === 'live' && venue.source === 'besttime'
+      ? `/live/venues/${encodeURIComponent(venue.id)}`
+      : `/venues/${encodeURIComponent(venue.id)}`
+  ), [browserPrivateKeyEnabled, mode])
   const locationLabel = location.kind === 'browser' ? 'Near you' : 'NYC'
   const modeLabel = browserPrivateKeyEnabled && mode === 'live' ? 'Your BestTime key' : mode === 'live' ? 'Live data' : location.kind === 'browser' ? 'Near you demo' : 'NYC demo'
 
@@ -344,9 +361,14 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
             {error ? <p className="mt-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            <VenueDetailPanel key={`${effectiveSelectedVenueId ?? 'empty'}-${selectionPulse}`} venue={selectedVenue} highlight={selectionPulse > 0} />
+            <VenueDetailPanel
+              key={`${effectiveSelectedVenueId ?? 'empty'}-${selectionPulse}`}
+              detailHref={selectedVenue ? getDetailHref(selectedVenue) : undefined}
+              venue={selectedVenue}
+              highlight={selectionPulse > 0}
+            />
             <div className="mt-4">
-              <VenueList venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={selectVenue} />
+              <VenueList venues={visibleVenues} getDetailHref={getDetailHref} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={selectVenue} />
             </div>
           </div>
         </aside>
@@ -427,9 +449,14 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
             </div>
             {error ? <p className="mb-3 rounded-md bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
             {selectedVenue ? (
-              <VenueDetailPanel key={`${effectiveSelectedVenueId ?? 'empty'}-${selectionPulse}-mobile`} venue={selectedVenue} highlight={selectionPulse > 0} />
+              <VenueDetailPanel
+                key={`${effectiveSelectedVenueId ?? 'empty'}-${selectionPulse}-mobile`}
+                detailHref={getDetailHref(selectedVenue)}
+                venue={selectedVenue}
+                highlight={selectionPulse > 0}
+              />
             ) : (
-              <VenueList venues={visibleVenues} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={selectVenue} />
+              <VenueList venues={visibleVenues} getDetailHref={getDetailHref} selectedVenueId={effectiveSelectedVenueId} onSelectVenue={selectVenue} />
             )}
             <div className="mt-3 flex justify-center">
               <Attribution />

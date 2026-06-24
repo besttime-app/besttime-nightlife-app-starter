@@ -129,6 +129,67 @@ test('location modal can use browser coordinates for venue requests', async ({ c
   await expect(page.getByRole('heading', { name: /BestTime venues near you/i })).toBeVisible()
 })
 
+test('browser-key live results use client-side live detail links', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'desktop-only coverage')
+  const liveVenue = {
+    id: 'ven_e2e_live',
+    besttimeVenueId: 'ven_e2e_live',
+    slug: 'e2e-live-bar',
+    name: 'E2E Live Bar',
+    address: '10 Live St New York, NY',
+    city: 'New York',
+    citySlug: 'new-york',
+    lat: 40.72,
+    lng: -73.99,
+    categories: ['nightlife'],
+    primaryCategory: 'nightlife',
+    venueType: 'Bar',
+    rating: 4.6,
+    reviews: 1200,
+    busyness: 55,
+    liveBusyness: 61,
+    liveStatus: 'available',
+    hasFootTraffic: true,
+    source: 'besttime',
+    week: Array.from({ length: 7 }, (_, dayInt) => ({
+      dayInt,
+      dayLabel: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][dayInt],
+      peakHour: 20,
+      quietHour: 9,
+      hours: Array.from({ length: 24 }, (_, hour) => ({ hour, busyness: hour === 20 ? 80 : 20 }))
+    })),
+    summary: 'Live result returned by the app API proxy.'
+  }
+
+  await page.route('**/api/besttime/venues?**', async route => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ mode: 'live', venues: [liveVenue] })
+    })
+  })
+  await page.route('**/api/besttime/venues/ven_e2e_live', async route => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ mode: 'live', venue: liveVenue })
+    })
+  })
+
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.evaluate(() => {
+    window.localStorage.setItem('besttime.location-choice', 'nyc-demo')
+    window.localStorage.setItem('besttime.api-keys', JSON.stringify({ privateKey: 'pri_e2e_live_key' }))
+  })
+  await page.reload()
+
+  await expect(page.locator('aside').getByText('Your BestTime key')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'E2E Live Bar' }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Details' }).first()).toHaveAttribute('href', '/live/venues/ven_e2e_live')
+  await page.getByRole('link', { name: 'Details' }).first().click()
+  await expect(page).toHaveURL(/\/live\/venues\/ven_e2e_live$/)
+  await expect(page.getByRole('heading', { name: 'E2E Live Bar' }).first()).toBeVisible()
+  await expect(page.getByText('Browser API key live detail')).toBeVisible()
+})
+
 test('mobile filters and detail CTA remain reachable above navigation', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'mobile-only coverage')
   await resetLocationChoice(page)

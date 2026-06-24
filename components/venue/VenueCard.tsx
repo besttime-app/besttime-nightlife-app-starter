@@ -4,6 +4,7 @@ import type { Venue } from '@/lib/types'
 import { getVenueTypeLabel } from '@/lib/venue-display'
 
 type VenueCardProps = {
+  detailHref?: string
   venue: Venue
   selected?: boolean
   onSelect: (venueId: string) => void
@@ -14,7 +15,7 @@ const formatReviews = (reviews?: number) => {
   return `${Intl.NumberFormat('en-US', { notation: reviews >= 1000 ? 'compact' : 'standard' }).format(reviews)} reviews`
 }
 
-export function VenueCard({ venue, selected = false, onSelect }: VenueCardProps) {
+export function VenueCard({ detailHref, venue, selected = false, onSelect }: VenueCardProps) {
   const busyness = venue.liveBusyness ?? venue.busyness
   const venueType = getVenueTypeLabel(venue)
 
@@ -55,7 +56,7 @@ export function VenueCard({ venue, selected = false, onSelect }: VenueCardProps)
         <span className={`text-xs font-semibold ${venue.liveStatus === 'available' ? 'text-emerald-700' : 'text-slate-500'}`}>
           {venue.liveStatus === 'available' ? 'Live now' : 'Forecast'}
         </span>
-        <Link href={`/venues/${encodeURIComponent(venue.id)}`} className="text-xs font-semibold text-slate-900 underline-offset-2 hover:underline">
+        <Link href={detailHref || `/venues/${encodeURIComponent(venue.id)}`} className="text-xs font-semibold text-slate-900 underline-offset-2 hover:underline">
           Details
         </Link>
       </div>
