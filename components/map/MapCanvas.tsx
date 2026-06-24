@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import type { Map, Marker } from 'maplibre-gl'
+import type { GeoJSONSource, Map } from 'maplibre-gl'
 import type { Venue } from '@/lib/types'
-import { createVenueMarkerElement } from './MapMarker'
 
 type MapCanvasProps = {
   venues: Venue[]
@@ -13,12 +12,51 @@ type MapCanvasProps = {
 
 const mapStyle = 'https://tiles.openfreemap.org/styles/liberty'
 const defaultCenter: [number, number] = [-73.995, 40.728]
+const venueSourceId = 'besttime-venues'
+const venueLayerId = 'besttime-venue-dots'
+
+type VenueFeatureCollection = {
+  type: 'FeatureCollection'
+  features: Array<{
+    type: 'Feature'
+    geometry: {
+      type: 'Point'
+      coordinates: [number, number]
+    }
+    properties: {
+      id: string
+      busyness: number
+      selected: boolean
+    }
+  }>
+}
+
+const venueFeatureCollection = (venues: Venue[], selectedVenueId?: string): VenueFeatureCollection => ({
+  type: 'FeatureCollection',
+  features: venues.map(venue => ({
+    type: 'Feature',
+    geometry: {
+      type: 'Point',
+      coordinates: [venue.lng, venue.lat]
+    },
+    properties: {
+      id: venue.id,
+      busyness: venue.liveBusyness ?? venue.busyness,
+      selected: venue.id === selectedVenueId
+    }
+  }))
+})
 
 export function MapCanvas({ venues, selectedVenueId, onSelectVenue }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
-  const markersRef = useRef<Marker[]>([])
+  const lastFitVenueIdsRef = useRef('')
+  const onSelectVenueRef = useRef(onSelectVenue)
   const [mapReady, setMapReady] = useState(false)
+
+  useEffect(() => {
+    onSelectVenueRef.current = onSelectVenue
+  }, [onSelectVenue])
 
   useEffect(() => {
     let cancelled = false
@@ -51,8 +89,6 @@ export function MapCanvas({ venues, selectedVenueId, onSelectVenue }: MapCanvasP
 
     return () => {
       cancelled = true
-      markersRef.current.forEach(marker => marker.remove())
-      markersRef.current = []
       mapRef.current?.remove()
       mapRef.current = null
       setMapReady(false)
@@ -69,22 +105,63 @@ export function MapCanvas({ venues, selectedVenueId, onSelectVenue }: MapCanvasP
       const maplibregl = await import('maplibre-gl')
       if (cancelled) return
 
-      markersRef.current.forEach(marker => marker.remove())
-      markersRef.current = venues.map(venue => {
-        const element = createVenueMarkerElement(venue, venue.id === selectedVenueId)
-        element.addEventListener('click', () => onSelectVenue(venue.id))
+      const data = venueFeatureCollection(venues, selectedVenueId)
+      const source = map.getSource(venueSourceId) as GeoJSONSource | undefined
 
-        return new maplibregl.Marker({ element, anchor: 'center' })
-          .setLngLat([venue.lng, venue.lat])
-          .addTo(map)
-      })
+      if (source) {
+        source.setData(data)
+      } else {
+        map.addSource(venueSourceId, {
+          type: 'geojson',
+          data
+        })
+        map.addLayer({
+          id: venueLayerId,
+          type: 'circle',
+          source: venueSourceId,
+          paint: {
+            'circle-color': [
+              'case',
+              ['>=', ['get', 'busyness'], 80],
+              '#dc2626',
+              ['>=', ['get', 'busyness'], 65],
+              '#d97706',
+              ['>=', ['get', 'busyness'], 45],
+              '#0f766e',
+              '#2563eb'
+            ],
+            'circle-opacity': 0.96,
+            'circle-pitch-alignment': 'viewport',
+            'circle-pitch-scale': 'viewport',
+            'circle-radius': ['case', ['boolean', ['get', 'selected'], false], 15, 12],
+            'circle-stroke-color': ['case', ['boolean', ['get', 'selected'], false], '#111827', '#ffffff'],
+            'circle-stroke-opacity': 1,
+            'circle-stroke-width': ['case', ['boolean', ['get', 'selected'], false], 4, 3]
+          }
+        })
+        map.on('click', venueLayerId, event => {
+          const venueId = event.features?.[0]?.properties?.id
+          if (typeof venueId === 'string') onSelectVenueRef.current(venueId)
+        })
+        map.on('mouseenter', venueLayerId, () => {
+          map.getCanvas().style.cursor = 'pointer'
+        })
+        map.on('mouseleave', venueLayerId, () => {
+          map.getCanvas().style.cursor = ''
+        })
+      }
 
-      if (venues.length > 1) {
+      const venueIdsKey = venues.map(venue => venue.id).join('|')
+      if (venues.length > 1 && venueIdsKey !== lastFitVenueIdsRef.current) {
+        lastFitVenueIdsRef.current = venueIdsKey
         const bounds = venues.reduce(
           (nextBounds, venue) => nextBounds.extend([venue.lng, venue.lat]),
           new maplibregl.LngLatBounds([venues[0].lng, venues[0].lat], [venues[0].lng, venues[0].lat])
         )
         map.fitBounds(bounds, { padding: 88, maxZoom: 13.8, duration: 650 })
+      } else if (venues.length === 1 && venueIdsKey !== lastFitVenueIdsRef.current) {
+        lastFitVenueIdsRef.current = venueIdsKey
+        map.easeTo({ center: [venues[0].lng, venues[0].lat], zoom: 13.8, duration: 650 })
       }
     }
 
@@ -93,7 +170,7 @@ export function MapCanvas({ venues, selectedVenueId, onSelectVenue }: MapCanvasP
     return () => {
       cancelled = true
     }
-  }, [mapReady, venues, selectedVenueId, onSelectVenue])
+  }, [mapReady, venues, selectedVenueId])
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-slate-200">

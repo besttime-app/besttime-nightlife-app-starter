@@ -18,6 +18,7 @@ The starter must work immediately without a BestTime API key so developers can e
 - If a location choice is stored, the UI must still expose a clear control to reopen the location prompt after refresh.
 - Demo map/API results should keep the default visible result limit modest so mobile browsers do not render all fixture markers at once.
 - Category and quick filters must work against the full fixture pool while returning a bounded result set.
+- Discovery-map venue dots should be rendered as map-native layers or equivalent map-synchronized primitives so pitch, bearing, and zoom cannot desynchronize them from the basemap.
 
 ## SEO Behavior
 
