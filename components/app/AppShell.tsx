@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import Link from 'next/link'
 import { BarChart3, Building2, ChevronUp, Database, Loader2, Map, MapPin } from 'lucide-react'
+import { ApiKeySettings } from '@/components/app/ApiKeySettings'
 import { Attribution } from '@/components/app/Attribution'
 import { BottomNav } from '@/components/app/BottomNav'
 import { LocationModal } from '@/components/app/LocationModal'
@@ -12,6 +13,14 @@ import { QuickFilters } from '@/components/filters/QuickFilters'
 import { MapCanvas } from '@/components/map/MapCanvas'
 import { getBusynessMetric, VenueDetailPanel } from '@/components/venue/VenueDetailPanel'
 import { VenueList } from '@/components/venue/VenueList'
+import {
+  browserApiKeyHeaders,
+  browserApiKeysStorageKey,
+  hasBrowserPrivateKey,
+  normalizeBrowserApiKeys,
+  parseStoredBrowserApiKeys,
+  type BrowserBestTimeApiKeys
+} from '@/lib/api-key-overrides'
 import type { AppMode, Venue, VenueCategory, VenueFilters } from '@/lib/types'
 
 type AppShellProps = {
@@ -98,6 +107,12 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
   const [category, setCategory] = useState<VenueCategory>(initialCategory)
   const [quickFilter, setQuickFilter] = useState<VenueFilters['quickFilter']>()
   const [advanced, setAdvanced] = useState<AdvancedFilterState>(defaultAdvancedFilters)
+  const [browserApiKeys, setBrowserApiKeys] = useState<BrowserBestTimeApiKeys>(() => (
+    typeof window === 'undefined'
+      ? {}
+      : parseStoredBrowserApiKeys(window.localStorage.getItem(browserApiKeysStorageKey))
+  ))
+  const [browserApiKeyVersion, setBrowserApiKeyVersion] = useState(0)
   const [location, setLocation] = useState<LocationState>(demoLocation)
   const [locationPromptKey, setLocationPromptKey] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
@@ -116,11 +131,33 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
     }).toString()
   )
   const fetchedChangedStateRef = useRef(initialMode === 'live')
+  const browserPrivateKeyEnabled = hasBrowserPrivateKey(browserApiKeys)
 
   const venueSearchKey = useMemo(
     () => buildVenueSearchParams({ advanced, category, location, quickFilter, resultLimit }).toString(),
     [advanced, category, location, quickFilter, resultLimit]
   )
+  const apiKeyHeaders = useMemo(() => browserApiKeyHeaders(browserApiKeys), [browserApiKeys])
+  const apiKeySignature = useMemo(() => {
+    const normalizedKeys = normalizeBrowserApiKeys(browserApiKeys)
+    return `${normalizedKeys.privateKey ? 'private' : 'no-private'}:${normalizedKeys.publicKey ? 'public' : 'no-public'}:${browserApiKeyVersion}`
+  }, [browserApiKeyVersion, browserApiKeys])
+
+  const saveBrowserApiKeys = useCallback((keys: BrowserBestTimeApiKeys) => {
+    const normalizedKeys = normalizeBrowserApiKeys(keys)
+
+    setBrowserApiKeys(normalizedKeys)
+    window.localStorage.setItem(browserApiKeysStorageKey, JSON.stringify(normalizedKeys))
+    fetchedChangedStateRef.current = true
+    setBrowserApiKeyVersion(current => current + 1)
+  }, [])
+
+  const clearBrowserApiKeys = useCallback(() => {
+    setBrowserApiKeys({})
+    window.localStorage.removeItem(browserApiKeysStorageKey)
+    fetchedChangedStateRef.current = true
+    setBrowserApiKeyVersion(current => current + 1)
+  }, [])
 
   const handleUseBrowserLocation = useCallback((browserLocation: BrowserLocation) => {
     setLocation({ kind: 'browser', ...browserLocation })
@@ -181,7 +218,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
 
   useEffect(() => {
     const isInitialServerState = venueSearchKey === initialVenueSearchKeyRef.current
-    if (isInitialServerState && !fetchedChangedStateRef.current) {
+    if (isInitialServerState && !fetchedChangedStateRef.current && !browserPrivateKeyEnabled) {
       return
     }
     if (!isInitialServerState) fetchedChangedStateRef.current = true
@@ -194,6 +231,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
 
       try {
         const response = await fetch(`/api/besttime/venues?${venueSearchKey}`, {
+          headers: apiKeyHeaders,
           signal: controller.signal
         })
         const body = await response.json() as { mode?: AppMode; venues?: Venue[]; error?: string }
@@ -217,7 +255,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
     return () => {
       controller.abort()
     }
-  }, [venueSearchKey])
+  }, [apiKeyHeaders, apiKeySignature, browserPrivateKeyEnabled, venueSearchKey])
 
   const visibleVenues = useMemo(
     () => venues.filter(venue => {
@@ -232,7 +270,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
   const effectiveSelectedVenueId = selectedVenue?.id
   const selectedVenueBusyness = selectedVenue ? getBusynessMetric(selectedVenue) : undefined
   const locationLabel = location.kind === 'browser' ? 'Near you' : 'NYC'
-  const modeLabel = mode === 'live' ? 'Live data' : location.kind === 'browser' ? 'Near you demo' : 'NYC demo'
+  const modeLabel = browserPrivateKeyEnabled && mode === 'live' ? 'Your BestTime key' : mode === 'live' ? 'Live data' : location.kind === 'browser' ? 'Near you demo' : 'NYC demo'
 
   const filterPanel = (
     <div className="grid gap-3">
@@ -299,6 +337,7 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
                   <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
                   Change
                 </button>
+                <ApiKeySettings keys={browserApiKeys} onClear={clearBrowserApiKeys} onSave={saveBrowserApiKeys} />
                 {isLoading ? <Loader2 aria-label="Loading venues" className="h-5 w-5 animate-spin text-slate-500" /> : null}
               </div>
             </div>
@@ -327,15 +366,18 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
                 <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">{modeLabel}</p>
                 <h1 className="truncate text-base font-semibold text-slate-950">BestTime venues</h1>
               </div>
-              <button
-                type="button"
-                onClick={openLocationPrompt}
-                aria-label="Change location"
-                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 hover:text-slate-950"
-              >
-                <MapPin aria-hidden="true" className="h-3 w-3" />
-                {locationLabel}
-              </button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <ApiKeySettings keys={browserApiKeys} onClear={clearBrowserApiKeys} onSave={saveBrowserApiKeys} variant="mobile" />
+                <button
+                  type="button"
+                  onClick={openLocationPrompt}
+                  aria-label="Change location"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 hover:text-slate-950"
+                >
+                  <MapPin aria-hidden="true" className="h-3 w-3" />
+                  {locationLabel}
+                </button>
+              </div>
             </div>
             <div className="grid gap-3">
               <CategoryChips value={category} onChange={setCategory} />

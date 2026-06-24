@@ -139,20 +139,56 @@ describe('BestTime mapping and repository', () => {
     expect(JSON.stringify(venues)).not.toContain('pri_response_should_never_leak')
   })
 
-  it('redacts nested private keys and active secrets', () => {
+  it('uses browser-provided private key overrides before server env keys', async () => {
+    vi.stubEnv('BESTTIME_API_KEY', 'pri_server_secret')
+    let requestedUrl: URL | undefined
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      requestedUrl = new URL(String(input))
+
+      return new Response(JSON.stringify({
+        status: 'OK',
+        venues: [{
+          venue_id: 'ven_override',
+          venue_name: 'Override Bar',
+          venue_type: 'BAR'
+        }]
+      }))
+    }))
+
+    const venues = await listBestTimeVenues({ category: 'nightlife', limit: 1 }, {
+      privateKey: 'pri_browser_secret',
+      publicKey: 'pub_browser_secret'
+    })
+
+    if (!requestedUrl) throw new Error('Expected BestTime fetch to be called')
+    expect(requestedUrl.searchParams.get('api_key_private')).toBe('pri_browser_secret')
+    expect(requestedUrl.searchParams.get('api_key_private')).not.toBe('pri_server_secret')
+    expect(JSON.stringify(venues)).not.toContain('pri_browser_secret')
+    expect(JSON.stringify(venues)).not.toContain('pub_browser_secret')
+  })
+
+  it('redacts nested public and private keys and active secrets', () => {
     const redacted = redactPrivateKey({
       Api_Key_Private: 'pri_object_secret',
+      Api_Key_Public: 'pub_object_secret',
       nested: [
         'https://besttime.app/api/v1/venues/filter?api_key_private=plain-secret&limit=1',
+        'https://besttime.app/api/v1/venues/ven_test?api_key_public=public-secret',
         'prefix pri_pattern_secret suffix',
-        'plain-secret'
+        'prefix pub_pattern_secret suffix',
+        'plain-secret',
+        'public-secret'
       ]
-    }, 'plain-secret')
+    }, ['plain-secret', 'public-secret'])
 
     expect(JSON.stringify(redacted)).not.toContain('Api_Key_Private')
+    expect(JSON.stringify(redacted)).not.toContain('Api_Key_Public')
     expect(JSON.stringify(redacted)).not.toContain('pri_object_secret')
+    expect(JSON.stringify(redacted)).not.toContain('pub_object_secret')
     expect(JSON.stringify(redacted)).not.toContain('plain-secret')
+    expect(JSON.stringify(redacted)).not.toContain('public-secret')
     expect(JSON.stringify(redacted)).not.toContain('pri_pattern_secret')
+    expect(JSON.stringify(redacted)).not.toContain('pub_pattern_secret')
   })
 
   it('redacts BestTime error details', async () => {

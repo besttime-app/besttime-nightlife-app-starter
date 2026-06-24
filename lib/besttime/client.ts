@@ -2,6 +2,7 @@ import 'server-only'
 
 import { siteConfig } from '@/lib/config'
 import type { VenueFilters } from '@/lib/types'
+import { bestTimeCredentialSecrets, normalizeBestTimeCredentials, type BestTimeCredentials } from './credentials'
 import { BestTimeError, redactPrivateKey } from './errors'
 import { mapBestTimeVenue } from './mappers'
 
@@ -47,9 +48,12 @@ const readJson = async (response: Response) => {
 export const requestBestTime = async (
   path: string,
   params: BestTimeParams = {},
-  init: RequestInit = {}
+  init: RequestInit = {},
+  credentials: BestTimeCredentials = {}
 ) => {
-  const apiKey = process.env.BESTTIME_API_KEY?.trim()
+  const normalizedCredentials = normalizeBestTimeCredentials(credentials)
+  const apiKey = normalizedCredentials.privateKey || process.env.BESTTIME_API_KEY?.trim()
+  const redactionSecrets = bestTimeCredentialSecrets(normalizedCredentials, process.env.BESTTIME_API_KEY)
   if (!apiKey) throw new BestTimeError('BESTTIME_API_KEY is not configured')
 
   const url = buildBestTimeUrl(path)
@@ -65,7 +69,7 @@ export const requestBestTime = async (
       cache: 'no-store'
     })
   } catch (error) {
-    const details = redactPrivateKey(error, apiKey)
+    const details = redactPrivateKey(error, redactionSecrets)
     const message =
       typeof details === 'object' && details && 'message' in details && typeof details.message === 'string'
         ? `BestTime network request failed: ${details.message}`
@@ -77,7 +81,7 @@ export const requestBestTime = async (
     })
   }
 
-  const json = redactPrivateKey(await readJson(response), apiKey)
+  const json = redactPrivateKey(await readJson(response), redactionSecrets)
   const status = typeof json === 'object' && json && 'status' in json ? String(json.status).toLowerCase() : undefined
   const message =
     typeof json === 'object' && json && 'message' in json && typeof json.message === 'string'
@@ -140,7 +144,7 @@ const applyForecastWindow = (params: BestTimeParams, filters: Partial<VenueFilte
   params.order = 'asc,desc'
 }
 
-export const listBestTimeVenues = async (filters: Partial<VenueFilters> = {}) => {
+export const listBestTimeVenues = async (filters: Partial<VenueFilters> = {}, credentials: BestTimeCredentials = {}) => {
   const category = filters.category || 'nightlife'
   const params: BestTimeParams = {
     types: categoryTypes[category],
@@ -159,14 +163,14 @@ export const listBestTimeVenues = async (filters: Partial<VenueFilters> = {}) =>
     applyForecastWindow(params, filters)
   }
 
-  const json = await requestBestTime('/venues/filter', params)
+  const json = await requestBestTime('/venues/filter', params, {}, credentials)
   const venues = typeof json === 'object' && json && 'venues' in json && Array.isArray(json.venues) ? json.venues : []
 
   return venues.map(venue => mapBestTimeVenue(venue as Record<string, unknown>))
 }
 
-export const getBestTimeVenue = async (venueId: string) => {
-  const json = await requestBestTime(`/venues/${encodeURIComponent(venueId)}`)
+export const getBestTimeVenue = async (venueId: string, credentials: BestTimeCredentials = {}) => {
+  const json = await requestBestTime(`/venues/${encodeURIComponent(venueId)}`, {}, {}, credentials)
   const venue =
     typeof json === 'object' && json && 'venue' in json
       ? json.venue

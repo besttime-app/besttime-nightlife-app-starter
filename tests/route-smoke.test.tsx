@@ -77,6 +77,42 @@ describe('route data dependencies', () => {
     expect(bodyText).not.toContain(`api_key_private=${secret}`)
   })
 
+  it('accepts browser-provided private key overrides without returning the key', async () => {
+    const browserSecret = 'pri_browser_route_secret'
+    let requestedUrl: URL | undefined
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      requestedUrl = new URL(String(input))
+
+      return new Response(JSON.stringify({
+        status: 'OK',
+        venues: [{
+          venue_id: 'ven_browser_route',
+          venue_name: 'Browser Route Bar',
+          venue_type: 'BAR',
+          api_key_private: browserSecret
+        }]
+      }))
+    }))
+
+    const request = new NextRequest('http://localhost/api/besttime/venues?category=nightlife&limit=1', {
+      headers: {
+        'x-besttime-api-key-private': browserSecret,
+        'x-besttime-api-key-public': 'pub_browser_route_secret'
+      }
+    })
+
+    const response = await getVenues(request)
+    const body = await response.json()
+    const bodyText = JSON.stringify(body)
+
+    expect(response.status).toBe(200)
+    expect(body.mode).toBe('live')
+    expect(body.venues).toHaveLength(1)
+    expect(requestedUrl?.searchParams.get('api_key_private')).toBe(browserSecret)
+    expect(bodyText).not.toContain(browserSecret)
+    expect(bodyText).not.toContain('pub_browser_route_secret')
+  })
+
   it('returns fixture venue detail through the detail route handler', async () => {
     const fixtureVenue = allFixtureVenues[0]
     const request = new NextRequest(`http://localhost/api/besttime/venues/${fixtureVenue.id}`)

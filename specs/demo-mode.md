@@ -38,3 +38,5 @@ The starter must work immediately without a BestTime API key so developers can e
 
 - When `BESTTIME_API_KEY` is configured, browser code must continue to call local `/api/besttime/*` routes only.
 - The private BestTime key stays server-side and must be redacted from API errors and test fixtures.
+- Public hosted demos may offer an optional browser API key override so visitors can test their own subscription without cloning. Those keys may be stored in `localStorage`, must be sent only to local `/api/besttime/*` proxy routes, must not be placed in URLs, and must be clearable from the UI.
+- The browser override must clearly warn that browser storage is for demo testing only and is not a secure production location for a private key.

@@ -43,6 +43,15 @@ BESTTIME_API_KEY=pri_your_key_here
 
 Restart the dev server. The browser still only calls local `/api/besttime/*` routes. The private key stays on the server.
 
+You can also test the public Vercel demo before installing the starter:
+
+1. Open the map.
+2. Click **API keys**.
+3. Paste your BestTime private key for live venue filtering.
+4. Optionally paste your public key for public venue/forecast endpoints as the starter expands.
+
+The browser demo stores those values in `localStorage` and sends them as headers to this app's `/api/besttime/*` proxy. This is useful for testing your own subscription on the hosted demo, but production forks should use `BESTTIME_API_KEY` in server env instead of browser storage.
+
 ## Admin Protection
 
 `/admin` works without a password for local demos, but it shows a warning modal. Before sharing a deployment, configure:
@@ -57,6 +66,14 @@ ADMIN_PASSWORD=choose-a-password
 2. Set `BESTTIME_API_KEY` in Vercel Project Settings if you want live data.
 3. Set `ADMIN_PASSWORD` before sharing the deployment.
 4. Deploy.
+
+CLI option:
+
+```bash
+npx vercel env add BESTTIME_API_KEY production
+npx vercel env add ADMIN_PASSWORD production
+npx vercel deploy --prod
+```
 
 Optional public settings:
 

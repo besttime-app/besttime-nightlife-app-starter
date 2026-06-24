@@ -66,6 +66,18 @@ test('desktop app shell renders map controls and category interactions', async (
   await page.waitForTimeout(250)
   expect(venueRequests).toHaveLength(0)
 
+  await page.getByRole('button', { name: 'API keys' }).click()
+  await expect(page.getByRole('heading', { name: 'Test with your BestTime keys' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open BestTime API keys' })).toHaveAttribute('href', 'https://besttime.app/api/v1/api_keys_list')
+  await page.getByLabel('Public API key').fill('pub_e2e_demo_key')
+  await page.getByRole('button', { name: 'Save and reload data' }).click()
+  await expect(page.getByRole('button', { name: 'Keys on' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem('besttime.api-keys'))).toContain('pub_e2e_demo_key')
+  await page.getByRole('button', { name: 'Keys on' }).click()
+  await page.getByRole('button', { name: 'Clear' }).click()
+  await expect(page.getByRole('button', { name: 'API keys' })).toBeVisible()
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem('besttime.api-keys'))).toBeNull()
+
   await page.reload()
   await expect(page.getByRole('dialog', { name: 'Choose a starting location' })).toBeHidden()
   await page.getByRole('button', { name: /change/i }).click()

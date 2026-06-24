@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { bestTimeCredentialSecrets, type BestTimeCredentials } from '@/lib/besttime/credentials'
 import { redactPrivateKey } from '@/lib/besttime/errors'
+import { getBestTimeRequestCredentials } from '@/lib/besttime/request-credentials'
 import { getVenueRepository } from '@/lib/data/repository'
 import type { VenueFilters } from '@/lib/types'
 
@@ -40,15 +42,16 @@ const getErrorStatus = (error: unknown) => {
   return typeof status === 'number' ? status : 500
 }
 
-const getErrorMessage = (error: unknown) => {
+const getErrorMessage = (error: unknown, credentials: BestTimeCredentials) => {
   const message = error instanceof Error ? error.message : 'Unable to load venues'
-  const redacted = redactPrivateKey(message, process.env.BESTTIME_API_KEY?.trim())
+  const redacted = redactPrivateKey(message, bestTimeCredentialSecrets(credentials, process.env.BESTTIME_API_KEY))
 
   return typeof redacted === 'string' ? redacted : 'Unable to load venues'
 }
 
 export async function GET(request: NextRequest) {
-  const repository = getVenueRepository()
+  const credentials = getBestTimeRequestCredentials(request)
+  const repository = getVenueRepository(credentials)
 
   try {
     const searchParams = request.nextUrl.searchParams
@@ -67,7 +70,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ mode: repository.mode, venues })
   } catch (error) {
     return NextResponse.json(
-      { mode: repository.mode, error: getErrorMessage(error) },
+      { mode: repository.mode, error: getErrorMessage(error, credentials) },
       { status: getErrorStatus(error) }
     )
   }
