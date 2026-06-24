@@ -16,6 +16,7 @@ import {
   parseStoredBrowserApiKeys,
   type BrowserBestTimeApiKeys
 } from '@/lib/api-key-overrides'
+import { liveDetailVenueStorageKey } from '@/lib/live-detail-storage'
 import type { AppMode, Venue, VenueHour } from '@/lib/types'
 import { formatHourLabel, getForecastBusyness, getVenueTypeLabel } from '@/lib/venue-display'
 
@@ -34,6 +35,18 @@ const getTrendHours = (venue: Venue) => {
 
 const peakHour = (hours: VenueHour[]) =>
   hours.reduce((best, hour) => hour.busyness > best.busyness ? hour : best, hours[0] ?? { hour: 0, busyness: 0 })
+
+const readCachedVenue = (venueId: string) => {
+  const stored = window.sessionStorage.getItem(liveDetailVenueStorageKey)
+  if (!stored) return undefined
+
+  try {
+    const parsed = JSON.parse(stored) as Partial<Venue>
+    return parsed.id === venueId && parsed.source === 'besttime' && parsed.name ? parsed as Venue : undefined
+  } catch {
+    return undefined
+  }
+}
 
 export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
   const [apiKeys, setApiKeys] = useState<BrowserBestTimeApiKeys>({})
@@ -68,6 +81,12 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
     const timer = window.setTimeout(() => {
       const storedKeys = parseStoredBrowserApiKeys(window.localStorage.getItem(browserApiKeysStorageKey))
       const normalizedKeys = normalizeBrowserApiKeys(storedKeys)
+      const cachedVenue = readCachedVenue(venueId)
+
+      if (cachedVenue) {
+        setVenue(cachedVenue)
+        setMode('live')
+      }
       if (!normalizedKeys.privateKey && !normalizedKeys.publicKey) return
 
       setApiKeys(normalizedKeys)
@@ -77,7 +96,7 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
     return () => {
       window.clearTimeout(timer)
     }
-  }, [])
+  }, [venueId])
 
   useEffect(() => {
     if (!hasPrivateKey) {
@@ -85,6 +104,11 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
     }
 
     const controller = new AbortController()
+    let timedOut = false
+    const timeout = window.setTimeout(() => {
+      timedOut = true
+      controller.abort()
+    }, 15000)
 
     async function loadVenue() {
       setIsLoading(true)
@@ -102,16 +126,21 @@ export function LiveVenueDetailsPage({ venueId }: LiveVenueDetailsPageProps) {
         setMode(body.mode || 'live')
         setVenue(body.venue)
       } catch (fetchError) {
-        if (controller.signal.aborted) return
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load live venue details')
+        if (controller.signal.aborted && !timedOut) return
+        setError(timedOut ? 'Live detail refresh timed out. Showing the venue data loaded from the live results list.' : fetchError instanceof Error ? fetchError.message : 'Unable to load live venue details')
       } finally {
+        window.clearTimeout(timeout)
         if (!controller.signal.aborted) setIsLoading(false)
+        if (timedOut) setIsLoading(false)
       }
     }
 
     void loadVenue()
 
-    return () => controller.abort()
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
   }, [apiKeyVersion, hasPrivateKey, headers, venueId])
 
   const trendHours = venue ? getTrendHours(venue) : []

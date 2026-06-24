@@ -21,6 +21,7 @@ import {
   parseStoredBrowserApiKeys,
   type BrowserBestTimeApiKeys
 } from '@/lib/api-key-overrides'
+import { liveDetailVenueStorageKey } from '@/lib/live-detail-storage'
 import type { AppMode, Venue, VenueCategory, VenueFilters } from '@/lib/types'
 
 type AppShellProps = {
@@ -288,6 +289,12 @@ export function AppShell({ initialMode, initialVenues, initialCategory, resultLi
   ), [browserPrivateKeyEnabled, mode])
   const locationLabel = location.kind === 'browser' ? 'Near you' : 'NYC'
   const modeLabel = browserPrivateKeyEnabled && mode === 'live' ? 'Your BestTime key' : mode === 'live' ? 'Live data' : location.kind === 'browser' ? 'Near you demo' : 'NYC demo'
+
+  useEffect(() => {
+    if (browserPrivateKeyEnabled && mode === 'live' && selectedVenue?.source === 'besttime') {
+      window.sessionStorage.setItem(liveDetailVenueStorageKey, JSON.stringify(selectedVenue))
+    }
+  }, [browserPrivateKeyEnabled, mode, selectedVenue])
 
   const filterPanel = (
     <div className="grid gap-3">
