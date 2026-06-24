@@ -180,7 +180,7 @@ export function MapCanvas({ venues, selectedVenueId, onMapInteract, onSelectVenu
 
   return (
     <div
-      className="relative h-full w-full overflow-hidden bg-slate-200"
+      className="radar-map-canvas relative h-full w-full overflow-hidden bg-slate-200"
       onPointerDownCapture={() => onMapInteractRef.current?.()}
       onWheelCapture={() => onMapInteractRef.current?.()}
     >

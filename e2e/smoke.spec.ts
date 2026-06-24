@@ -158,7 +158,8 @@ test('venue detail page renders forecast, attribution, and venue map', async ({ 
   await page.goto(`/venues/${detailSmokeVenue.id}`)
 
   await expect(page.getByRole('heading', { name: detailSmokeVenue.name })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Weekly busyness forecast' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Weekly visitor heatmap' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "Today's visitor trend" })).toBeVisible()
   await expect(page.getByRole('link', { name: 'View BestTime data' })).toHaveAttribute('href', 'https://besttime.app')
   await expect(page.locator(`[aria-label="Map centered on ${detailSmokeVenue.name}"]`)).toBeVisible()
 })

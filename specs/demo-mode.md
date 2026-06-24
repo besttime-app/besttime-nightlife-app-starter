@@ -31,7 +31,7 @@ The starter must work immediately without a BestTime API key so developers can e
 - Sitemap and static generation should include canonical fixture venue ID routes only.
 - Slug routes may resolve dynamically, but their canonical URL should point to the stable venue ID route to avoid duplicate indexed pages.
 - Venue JSON-LD should match the primary venue category: nightlife as `BarOrPub`, cafes as `CafeOrCoffeeShop`, shopping as `Store`, and popular as generic `LocalBusiness`.
-- Venue detail pages should expose a crawlable data-focused layout with live/current-hour metrics, current-day forecast, compact map context, and weekly heatmap.
+- Venue detail pages should expose a crawlable BestTime-style dashboard layout: dense venue identity and type details on the upper left, today's visitor trend on the upper right, weekly visitor heatmap below, and a compact 3D venue map on the lower right.
 - Weekly heatmaps should trim leading/trailing closed or zero-only hours so mobile users see the active forecast window first. Overnight venues must keep a continuous evening-to-early-morning window instead of expanding to a full 24-hour grid.
 
 ## Live Mode Boundary

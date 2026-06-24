@@ -130,8 +130,8 @@ select {
     margin-top: 0.75rem;
   }
 
-  .maplibregl-ctrl-bottom-left,
-  .maplibregl-ctrl-bottom-right {
+  .radar-map-canvas .maplibregl-ctrl-bottom-left,
+  .radar-map-canvas .maplibregl-ctrl-bottom-right {
     margin-bottom: calc(8.75rem + 5.75rem + env(safe-area-inset-bottom));
   }
 }
